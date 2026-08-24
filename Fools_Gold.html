@@ -1,0 +1,2153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Fool's Gold: Vault Heist</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@600;700;800&family=Manrope:wght@400;500;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#1b1815; --card:#272220; --card-hi:#332c27; --stroke:#40382f;
+    --ink:#f3ede3; --ink-dim:#b3a696; --ink-faint:#847860;
+    --brass:#c1793f; --brass-dark:#8a5326; --brass-dim:rgba(193,121,63,.16);
+    --xanh:#4caf6d; --xanh-dim:rgba(76,175,109,.16);
+    --vang:#e0b23c; --vang-dim:rgba(224,178,60,.16);
+    --do:#d1495c; --do-dim:rgba(209,73,92,.16);
+    --blue:#4a90a4; --gray:#5c5448;
+  }
+  *{box-sizing:border-box;}
+  body{
+    margin:0; font-family:'Manrope',sans-serif; font-size:15px;
+    background:
+      radial-gradient(ellipse at 50% -20%, #2a241d 0%, transparent 50%),
+      var(--bg);
+    color:var(--ink); min-height:100vh;
+  }
+  .font-head{font-family:'Outfit',sans-serif;}
+  #app{max-width:480px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;padding:14px 14px 0;position:relative;}
+
+  #topbar{
+    display:flex; align-items:center; gap:6px;
+    background:var(--card); border:1px solid var(--stroke); border-radius:14px;
+    padding:10px 10px; margin-bottom:10px; flex-wrap:wrap;
+  }
+  .chip{display:flex;align-items:center;gap:5px;flex:1;justify-content:center;min-width:0;}
+  .chip-icon{width:16px;height:16px;color:var(--ink-faint);flex-shrink:0;}
+  .chip-label{font-size:10px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.3px;white-space:nowrap;}
+  .chip-val{font-family:'Outfit',sans-serif;font-size:15px;font-weight:700;color:var(--ink);white-space:nowrap;}
+  .chip.loot .chip-val{color:var(--xanh);}
+  .chip.stage .chip-val{color:var(--blue);}
+  .chip-div{width:1px;height:22px;background:var(--stroke);flex-shrink:0;}
+  .icon-btn{
+    width:32px;height:32px;border-radius:9px;background:var(--card-hi);border:1px solid var(--stroke);
+    color:var(--ink-dim);cursor:pointer;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+  }
+  .icon-btn svg{width:16px;height:16px;}
+  .icon-btn:hover{color:var(--ink);}
+
+  #starGoalBar{
+    background:var(--card-hi);border:1px solid var(--brass);border-radius:12px;padding:8px 14px;
+    margin-bottom:14px;text-align:center;font-family:'Manrope',sans-serif;font-size:12.5px;color:var(--ink-dim);
+    display:none;
+  }
+  #starGoalBar b{color:var(--brass);font-family:'Outfit',sans-serif;}
+
+  .screen{width:100%;}
+  .hint{color:var(--ink-dim);font-size:13.5px;margin-bottom:14px;line-height:1.5;}
+  .big-btn{
+    padding:16px 20px;font-size:16px;font-weight:700;font-family:'Outfit',sans-serif;letter-spacing:.2px;
+    border:none;border-radius:14px;width:100%;cursor:pointer;
+    background:var(--brass);color:#241505;
+    box-shadow:0 3px 0 var(--brass-dark);
+  }
+  .big-btn:active{transform:translateY(2px);box-shadow:0 1px 0 var(--brass-dark);}
+
+  /* --- Intro / welcome --- */
+  #introScreen{text-align:center;padding-top:24px;}
+  #introScreen .intro-eyebrow{font-size:11px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.5px;margin-bottom:6px;}
+  #introScreen .intro-title{font-family:'Outfit',sans-serif;font-size:22px;font-weight:800;color:var(--brass);margin-bottom:14px;}
+  #introScreen .hint{margin-bottom:26px;}
+
+  .blink-cta{animation:blinkPulse 1.1s ease-in-out infinite;}
+  @keyframes blinkPulse{0%,100%{box-shadow:0 0 0 0 rgba(193,121,63,.55);}50%{box-shadow:0 0 0 9px rgba(193,121,63,0);}}
+
+  /* Dim scrim + spotlight used by the sim tutorial: the scrim darkens the
+     whole screen (z-index below the target), the highlighted target sits
+     ABOVE the scrim so it stays bright/undimmed with a static glow (no
+     blinking — blinking read as "click me" and fought with the popup's own
+     CTA), and the popup card sits above both so its "Next/Got It" button
+     is unmistakably the thing to click. */
+  #tutDimScrim{position:fixed;inset:0;background:rgba(10,8,6,.8);z-index:170;display:none;}
+
+  #itemDetailView{display:flex;flex-direction:column;gap:8px;}
+  .item-topbar-row{display:flex;justify-content:flex-start;}
+  .item-nav-row{display:flex;align-items:center;gap:6px;}
+  .back-btn-top{
+    background:var(--card-hi);border:1px solid var(--stroke);color:var(--ink-dim);
+    font-size:12.5px;font-weight:700;padding:6px 12px;border-radius:9px;cursor:pointer;
+    font-family:'Manrope',sans-serif;flex-shrink:0;
+  }
+  .back-btn-top:hover{color:var(--ink);border-color:var(--brass);}
+  .back-btn-top:disabled{opacity:.35;cursor:not-allowed;}
+  .arrow{
+    background:var(--card);border:1px solid var(--stroke);color:var(--ink-dim);
+    width:36px;height:36px;border-radius:10px;font-size:18px;cursor:pointer;flex-shrink:0;
+  }
+  .arrow:hover{color:var(--ink);}
+  .arrow:disabled{opacity:.3;cursor:not-allowed;}
+  #cardOuter{flex:1;overflow:hidden;position:relative;min-height:460px;}
+  .item-card{
+    background:var(--card); border:1px solid var(--stroke);
+    border-radius:18px; padding:18px 16px 16px; text-align:center;
+  }
+  .item-card.slide-in{animation:slideIn .3s ease;}
+  @keyframes slideIn{from{transform:translateX(40px);opacity:0;}to{transform:translateX(0);opacity:1;}}
+
+  .item-name{font-family:'Outfit',sans-serif;font-size:19px;font-weight:700;color:var(--ink);margin-bottom:8px;}
+  .rarity-badge{
+    display:inline-flex;align-items:center;gap:6px;font-size:12.5px;font-weight:700;
+    padding:5px 12px;border-radius:20px;margin-bottom:12px;
+  }
+  .rarity-dot{width:8px;height:8px;border-radius:50%;}
+  .rarity-badge.color-xanh{background:var(--xanh-dim);color:var(--xanh);}
+  .rarity-badge.color-vang{background:var(--vang-dim);color:var(--vang);}
+  .rarity-badge.color-do{background:var(--do-dim);color:var(--do);}
+  .rarity-badge.color-xanh .rarity-dot{background:var(--xanh);}
+  .rarity-badge.color-vang .rarity-dot{background:var(--vang);}
+  .rarity-badge.color-do .rarity-dot{background:var(--do);}
+
+  .archetype-badge{
+    display:inline-flex;align-items:center;gap:6px;font-size:12px;font-weight:700;
+    padding:4px 11px;border-radius:20px;margin-bottom:6px;background:var(--card-hi);border:1px solid var(--brass-dark);color:var(--brass);
+  }
+  .archetype-desc{font-size:11.5px;color:var(--ink-faint);margin-bottom:12px;line-height:1.35;max-width:280px;margin-left:auto;margin-right:auto;}
+  .arch-hl{color:var(--brass);font-weight:800;}
+  .roll-rule{display:flex;justify-content:center;gap:8px;margin-bottom:12px;}
+  .rule-pill{font-size:12px;font-weight:700;padding:4px 10px;border-radius:8px;}
+  .rule-pill.fake{background:rgba(255,255,255,.06);color:var(--ink-dim);}
+  .rule-pill.real{background:var(--xanh-dim);color:var(--xanh);}
+
+  .circles-row{display:flex;justify-content:center;gap:5px;margin-bottom:14px;flex-wrap:wrap;}
+  .circle{
+    width:26px;height:26px;border-radius:8px;background:var(--card-hi);border:1px solid var(--stroke);
+    display:flex;align-items:center;justify-content:center;font-size:11.5px;font-weight:700;color:var(--ink-faint);
+    font-family:'Outfit',sans-serif;
+  }
+  .circle.active{background:var(--brass);border-color:var(--brass-dark);color:#241505;}
+  .circle.final-good{background:var(--xanh);border-color:#2e6b42;color:#0d2b18;}
+  .circle.final-bad{background:var(--gray);border-color:#3d372e;color:var(--ink);}
+
+  .item-frame{
+    width:104px;height:104px;margin:4px auto 14px;border-radius:16px;position:relative;
+    display:flex;align-items:center;justify-content:center;
+  }
+  .item-frame.color-xanh{background:var(--xanh-dim);border:2px solid var(--xanh);}
+  .item-frame.color-vang{background:var(--vang-dim);border:2px solid var(--vang);}
+  .item-frame.color-do{background:var(--do-dim);border:2px solid var(--do);}
+  .item-frame svg{width:64px;height:64px;}
+
+  .result-badge{
+    display:inline-flex;align-items:center;gap:8px;font-family:'Outfit',sans-serif;font-weight:700;font-size:15px;
+    padding:7px 16px;border-radius:20px;margin-bottom:14px;
+  }
+  .result-badge.xin{background:var(--xanh-dim);color:var(--xanh);}
+  .result-badge.dom{background:rgba(255,255,255,.06);color:var(--ink-dim);}
+  .result-roll{font-size:12px;font-weight:500;color:var(--ink-faint);}
+
+  .action-buttons{display:flex;flex-direction:row;gap:8px;margin-top:4px;}
+  .rbtn{
+    flex:1;display:flex;flex-direction:column;align-items:center;gap:3px;justify-content:center;
+    padding:12px 6px;border-radius:12px;border:none;cursor:pointer;min-height:68px;
+  }
+  .rbtn:active{transform:translateY(1px);}
+  .rbtn:disabled{opacity:.4;cursor:not-allowed;}
+  .rbtn-emoji{font-size:20px;line-height:1;}
+  .rbtn-title{font-family:'Outfit',sans-serif;font-size:13.5px;font-weight:700;}
+  .rbtn-sub{font-size:11.5px;font-weight:500;opacity:.85;}
+  .rolling-note{font-size:14px;color:var(--brass);font-weight:700;padding:16px 0;}
+
+  .rbtn-buy{background:var(--brass);color:#241505;}
+  .rbtn-skip{background:var(--card-hi);color:var(--ink-dim);border:1px solid var(--stroke);}
+  .rbtn-store{background:var(--blue);color:#eafcff;}
+  .rbtn-sell{background:var(--xanh);color:#0d2b18;}
+  .rbtn-sellall{background:var(--vang);color:#2b2005;}
+  .rbtn-scam{background:var(--do);color:#fff0f2;}
+
+  .resolved-note{font-size:13px;color:var(--ink-faint);margin:6px 0 12px;}
+
+  /* --- World Map --- */
+  #worldMapScreen{padding-top:4px;}
+  .map-hint{color:var(--ink-dim);font-size:13.5px;margin-bottom:18px;text-align:center;line-height:1.5;}
+  .map-list{display:flex;flex-direction:column;align-items:center;}
+  .map-connector{width:2px;height:26px;border-left:2px dashed var(--stroke);}
+  .map-node{
+    width:100%;max-width:340px;background:var(--card);border:1.5px solid var(--stroke);border-radius:16px;
+    padding:12px 14px;display:flex;align-items:center;gap:12px;cursor:pointer;position:relative;text-align:left;
+    color:var(--ink);font-family:'Manrope',sans-serif;
+  }
+  .map-node.current{border-color:var(--brass);box-shadow:0 0 0 2px var(--brass-dim);}
+  .map-node.done{opacity:.65;}
+  .map-node.locked{opacity:.45;cursor:default;filter:grayscale(.5);}
+  .map-node-illust{font-size:32px;flex-shrink:0;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:var(--card-hi);border-radius:12px;}
+  .map-node-body{flex:1;min-width:0;}
+  .map-node-num{font-size:10.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.4px;}
+  .map-node-name{font-family:'Outfit',sans-serif;font-size:16px;font-weight:700;color:var(--ink);}
+  .map-node-status{font-size:12px;color:var(--ink-dim);margin-top:2px;}
+  .map-node-sparkles{display:flex;gap:3px;margin-top:5px;flex-wrap:wrap;}
+  .map-node-sparkle{font-size:12px;line-height:1;}
+  .map-node-sparkle.color-xanh{color:var(--xanh);}
+  .map-node-sparkle.color-vang{color:var(--vang);}
+  .map-node-sparkle.color-do{color:var(--do);}
+  .map-node-check{position:absolute;top:10px;right:12px;color:var(--xanh);font-size:18px;font-weight:800;}
+  .map-node-lock{position:absolute;top:10px;right:12px;font-size:16px;}
+  .map-tooltip{
+    position:fixed;z-index:200;background:var(--card-hi);border:1px solid var(--brass);border-radius:12px;
+    padding:10px 14px;max-width:220px;pointer-events:none;box-shadow:0 6px 20px rgba(0,0,0,.4);
+  }
+  .map-tooltip-name{font-family:'Outfit',sans-serif;font-weight:700;font-size:14px;margin-bottom:4px;color:var(--ink);}
+  .map-tooltip-row{font-size:12px;color:var(--ink-dim);display:flex;justify-content:space-between;gap:8px;margin-bottom:2px;}
+  .map-tooltip-stars{font-size:12px;letter-spacing:1px;}
+  .map-tooltip-stars.risk{color:var(--do);}
+  .map-tooltip-stars.reward{color:var(--vang);}
+  .map-tooltip-blurb{font-size:11.5px;color:var(--ink-faint);margin-top:6px;line-height:1.4;}
+  .map-tooltip-do-note{font-size:12px;font-weight:800;color:var(--do);margin-top:6px;line-height:1.3;}
+  .big-btn-outline{
+    margin-top:14px;padding:14px 16px;font-size:13.5px;font-weight:700;font-family:'Outfit',sans-serif;
+    border:2px solid var(--brass);border-radius:14px;width:100%;cursor:pointer;
+    background:transparent;color:var(--brass);
+  }
+  .big-btn-outline:active{transform:translateY(1px);}
+
+  /* --- Stage grid (room overview) --- */
+  .stage-map-peek{display:flex;justify-content:center;gap:5px;margin-bottom:10px;flex-wrap:wrap;}
+  .stage-map-peek-item{background:var(--card);border:1px solid var(--stroke);border-radius:10px;padding:4px 7px;display:flex;flex-direction:column;align-items:center;gap:2px;min-width:38px;}
+  .stage-map-peek-item.current{border-color:var(--brass);box-shadow:0 0 0 1.5px var(--brass-dim);}
+  .stage-map-peek-item.done{opacity:.45;}
+  .stage-map-peek-item.locked{opacity:.55;}
+  .peek-num{font-size:9px;color:var(--ink-faint);font-weight:700;}
+  .peek-sparkles{display:flex;gap:1px;flex-wrap:wrap;max-width:52px;justify-content:center;}
+  .peek-sparkle{font-size:9px;line-height:1;}
+  .peek-sparkle.color-xanh{color:var(--xanh);}
+  .peek-sparkle.color-vang{color:var(--vang);}
+  .peek-sparkle.color-do{color:var(--do);}
+  #stageGridView{}
+  .stage-header{text-align:center;margin-bottom:10px;}
+  .stage-header-eyebrow{font-size:10.5px;color:var(--ink-faint);text-transform:uppercase;letter-spacing:.4px;}
+  .stage-header-title{font-family:'Outfit',sans-serif;font-size:19px;font-weight:800;color:var(--brass);margin:2px 0 6px;}
+  .stage-hint-emphasis{font-family:'Outfit',sans-serif;font-size:15.5px;font-weight:800;color:var(--brass);line-height:1.4;}
+  .item-tiles{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:16px;}
+  .item-tile{
+    background:var(--card);border:1.5px solid var(--stroke);border-radius:14px;padding:10px 6px 8px;
+    display:flex;flex-direction:column;align-items:center;gap:4px;cursor:pointer;text-align:center;
+    position:relative;
+  }
+  .item-tile.pending{border-color:var(--brass);box-shadow:0 0 0 2px var(--brass-dim);}
+  .item-tile-icon{width:46px;height:46px;border-radius:12px;display:flex;align-items:center;justify-content:center;}
+  .item-tile-icon svg{width:30px;height:30px;}
+  .item-tile-icon.color-xanh{background:var(--xanh-dim);border:1.5px solid var(--xanh);}
+  .item-tile-icon.color-vang{background:var(--vang-dim);border:1.5px solid var(--vang);}
+  .item-tile-icon.color-do{background:var(--do-dim);border:1.5px solid var(--do);}
+  .item-tile-name{font-size:10.5px;color:var(--ink-dim);line-height:1.2;}
+  .item-tile.resolved{opacity:.4;cursor:default;filter:grayscale(.6);}
+  .item-tile.locked{opacity:.3;cursor:not-allowed;filter:grayscale(.7);}
+  .item-tile-status{font-size:9.5px;color:var(--ink-faint);line-height:1.2;}
+  .item-tile-tier{font-size:9px;font-weight:700;color:var(--brass);background:var(--card-hi);border:1px solid var(--brass-dark);border-radius:6px;padding:1px 6px;line-height:1.3;}
+  .item-tile-status.pending-status{color:var(--brass);font-weight:700;}
+  .invest-stepper{display:flex;align-items:center;justify-content:center;gap:14px;margin:4px 0 14px;}
+  .invest-hint{font-size:11px;color:var(--ink-faint);text-align:center;margin:-8px 0 14px;line-height:1.35;max-width:260px;margin-left:auto;margin-right:auto;}
+  .stepper-btn{width:40px;height:40px;border-radius:12px;border:1.5px solid var(--brass-dark);background:var(--card-hi);color:var(--brass);font-size:20px;font-weight:800;cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-family:'Outfit',sans-serif;}
+  .stepper-btn:disabled{opacity:.3;cursor:not-allowed;}
+  .stepper-btn:active:not(:disabled){transform:translateY(1px);}
+  .stepper-mid{min-width:120px;text-align:center;}
+  .stepper-cost{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--ink-dim);}
+  .stepper-range{font-family:'Outfit',sans-serif;font-size:17px;font-weight:800;color:var(--brass);}
+
+  #inventoryBar{
+    margin-top:auto;padding:12px 10px;background:var(--card);
+    border-top:1px solid var(--stroke);border-radius:16px 16px 0 0;position:sticky;bottom:0;
+  }
+  #inventoryLabel{font-family:'Outfit',sans-serif;font-size:12px;color:var(--ink-dim);margin-bottom:8px;text-align:center;}
+  #invSlots{display:flex;gap:8px;justify-content:center;flex-wrap:wrap;}
+  .inv-slot{
+    width:38px;height:38px;border-radius:9px;border:1.5px dashed var(--stroke);
+    display:flex;align-items:center;justify-content:center;font-size:14px;color:var(--ink-faint);
+  }
+  .inv-slot.filled{border-style:solid;cursor:pointer;position:relative;}
+  .inv-slot.filled:hover::after{
+    content:'Sell';position:absolute;top:-20px;font-size:10px;background:#000;padding:2px 6px;border-radius:4px;white-space:nowrap;color:#fff;
+  }
+  .inv-slot svg{width:20px;height:20px;position:relative;z-index:1;}
+  .inv-slot-tier{position:absolute;bottom:-6px;right:-4px;font-size:7.5px;font-weight:700;background:var(--card);border:1px solid var(--stroke);border-radius:5px;padding:0 3px;color:var(--ink-dim);line-height:1.4;z-index:2;}
+  .inv-slot-decay-ring{position:absolute;inset:1px;border-radius:50%;z-index:0;}
+
+  #toast{
+    position:fixed;bottom:14px;left:50%;transform:translateX(-50%);
+    background:var(--card-hi);border:1px solid var(--stroke);padding:10px 18px;border-radius:10px;
+    font-size:13.5px;opacity:0;pointer-events:none;transition:opacity .25s;z-index:50;max-width:90%;text-align:center;
+  }
+  #toast.show{opacity:1;}
+
+  .overlay{position:fixed;inset:0;background:rgba(10,8,6,.72);display:none;align-items:center;justify-content:center;z-index:100;padding:20px;}
+  .modal-box{background:var(--card);border:1px solid var(--stroke);border-radius:16px;padding:20px;max-width:340px;width:100%;max-height:80vh;overflow-y:auto;}
+  .modal-title{font-family:'Outfit',sans-serif;font-size:17px;font-weight:700;margin-bottom:12px;color:var(--ink);}
+  .modal-msg{font-size:14px;color:var(--ink-dim);margin-bottom:16px;line-height:1.5;}
+  .modal-actions{display:flex;gap:8px;flex-wrap:wrap;}
+  .modal-actions .rbtn{padding:11px 6px;min-height:auto;}
+  .swap-option{
+    display:flex;align-items:center;gap:10px;width:100%;background:var(--card-hi);border:1px solid var(--stroke);
+    border-radius:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer;color:var(--ink);font-family:'Manrope',sans-serif;
+  }
+  .swap-option:hover{border-color:var(--brass);}
+  .swap-option-icon{width:30px;height:30px;flex-shrink:0;display:flex;align-items:center;justify-content:center;border-radius:8px;}
+  .swap-option-icon svg{width:20px;height:20px;}
+  .swap-option-text{font-size:13px;flex:1;}
+  .rules-sec{margin-bottom:14px;}
+  .rules-sec h4{font-family:'Outfit',sans-serif;font-size:13px;font-weight:700;color:var(--brass);margin:0 0 6px;text-transform:uppercase;letter-spacing:.4px;}
+  .rules-sec ul{margin:0;padding-left:18px;font-size:13.5px;color:var(--ink-dim);line-height:1.6;}
+  .rules-sec li{margin-bottom:2px;}
+
+  .scam-result-box{text-align:center;}
+  .scam-result-emoji{font-size:56px;line-height:1;margin-bottom:8px;}
+  .scam-result-title{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;margin-bottom:6px;}
+  .scam-result-amount{font-family:'Outfit',sans-serif;font-size:32px;font-weight:800;margin-bottom:10px;}
+  .scam-result-box.success{border-color:var(--xanh);}
+  .scam-result-box.fail{border-color:var(--do);}
+  .scam-result-box.success .scam-result-title,.scam-result-box.success .scam-result-amount{color:var(--xanh);}
+  .scam-result-box.fail .scam-result-title,.scam-result-box.fail .scam-result-amount{color:var(--do);}
+  .scam-result-box.suspense .scam-result-emoji{animation:scamspin .6s linear infinite;}
+  @keyframes scamspin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+
+  .brand-wordmark{text-align:center;font-family:'Outfit',sans-serif;font-weight:800;font-size:15px;letter-spacing:1px;color:var(--brass);margin-bottom:10px;}
+  .mission-name{font-family:'Outfit',sans-serif;font-size:18px;font-weight:700;color:var(--ink);margin:8px 0 4px;}
+  .mission-loot{font-family:'Outfit',sans-serif;font-size:28px;font-weight:800;margin-bottom:10px;}
+  .mission-loot.pos{color:var(--xanh);}
+  .mission-loot.neg{color:var(--do);}
+  #summaryScreen{text-align:center;padding-top:16px;}
+  .playstyle-read{font-size:12.5px;color:var(--brass);background:var(--card-hi);border:1px solid var(--brass-dark);border-radius:12px;padding:8px 14px;margin:14px 0 4px;display:inline-block;}
+  #endGameOverlay .modal-box{max-width:380px;text-align:center;}
+  .endgame-stars{font-size:2.6rem;text-align:center;margin:8px 0 4px;letter-spacing:2px;}
+  .endgame-badge{font-family:'Outfit',sans-serif;font-size:20px;font-weight:800;color:var(--brass);background:var(--brass-dim);border:1px solid var(--brass-dark);border-radius:12px;padding:10px 12px;margin:10px 0 8px;}
+  .endgame-badge-desc{font-size:13.5px;color:var(--ink-dim);margin-bottom:14px;line-height:1.5;}
+  .endgame-stat-row{display:flex;justify-content:space-between;font-size:12.5px;color:var(--ink-faint);border-top:1px dashed var(--stroke);padding-top:8px;margin-top:4px;}
+
+  .tutorial-box{border-color:var(--brass);}
+  .tutorial-highlight{position:relative;z-index:180;box-shadow:0 0 0 4px var(--brass),0 0 22px 6px rgba(193,121,63,.65);border-radius:12px;}
+  #tutorialOverlay{background:transparent;z-index:190;}
+
+  .chip-buy-btn{background:var(--card-hi);border:1px solid var(--brass-dark);color:var(--brass);font-family:'Manrope',sans-serif;font-size:10.5px;font-weight:700;border-radius:8px;padding:5px 8px;cursor:pointer;white-space:nowrap;line-height:1.3;text-align:center;}
+  .chip-buy-btn:disabled{opacity:.35;cursor:not-allowed;}
+  .chip-buy-btn.bribing{background:var(--brass);color:#241505;}
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="brand-wordmark">💰 FOOL'S GOLD</div>
+  <div id="topbar">
+    <div class="chip"><span class="chip-label">Turns</span><span class="chip-val" id="turnsVal">25</span></div>
+    <div class="chip-div"></div>
+    <div class="chip loot"><span class="chip-label">Loot</span><span class="chip-val" id="lootVal">0k</span></div>
+    <div class="chip-div"></div>
+    <div class="chip"><span class="chip-label">Stash</span><span class="chip-val" id="invCountVal">0/2</span></div>
+    <button class="chip-buy-btn" id="bribeBtn">BRIBE<br>-500k +1</button>
+    <button class="icon-btn" id="helpBtn" title="Rules">?</button>
+    <button class="icon-btn" id="resetBtn" title="Reset">↺</button>
+  </div>
+
+  <div id="starGoalBar"></div>
+
+  <div id="introScreen" class="screen" style="display:none;">
+    <div class="intro-eyebrow">Before We Begin</div>
+    <div class="intro-title">Ready to Break In?</div>
+    <div class="hint">The practice round gets you comfortable with Steal, Sell, Stash, and Scam before you take on the 5 real heists.</div>
+    <button class="big-btn" id="simEnterBtn">▶ Enter the Practice Round</button>
+    <button class="big-btn-outline" id="simSkipBtn">Skip the practice, dive right in →</button>
+  </div>
+
+  <div id="worldMapScreen" class="screen" style="display:none;">
+    <div class="map-hint">Later locations hold rarer treasures,<br>but they're riskier too.</div>
+    <div class="map-list" id="mapList"></div>
+    <button class="big-btn-outline" id="giveUpMapBtn" style="display:none;">End the Run Here</button>
+  </div>
+  <div class="map-tooltip" id="mapTooltip" style="display:none;"></div>
+  <div class="map-tooltip" id="bribeTooltip" style="display:none;"></div>
+
+  <div id="stageScreen" class="screen" style="display:none;">
+    <div class="stage-map-peek" id="stageMapPeek"></div>
+    <div id="stageGridView">
+      <div class="stage-header">
+        <div class="stage-header-eyebrow" id="stageEyebrow">Stage 1/5</div>
+        <div class="stage-header-title" id="stageTitle"></div>
+        <div class="hint stage-hint-emphasis">You shouldn't take everything — decide which items are worth spending Turns on.</div>
+      </div>
+      <div class="item-tiles" id="itemTiles"></div>
+      <button class="big-btn-outline" id="exitStageBtn">🚪 EXIT — Leave the Heist</button>
+    </div>
+    <div id="itemDetailView" style="display:none;">
+      <div class="item-topbar-row">
+        <button id="backBtn" class="back-btn-top">‹ Back to Room</button>
+      </div>
+      <div class="item-nav-row">
+        <button class="arrow" id="arrowLeft">‹</button>
+        <div id="cardOuter"><div class="item-card" id="itemCard"></div></div>
+        <button class="arrow" id="arrowRight">›</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="summaryScreen" class="screen" style="display:none;">
+    <div class="modal-title">🏁 Mission Complete</div>
+    <div class="mission-name" id="summaryStageName"></div>
+    <div class="mission-loot" id="summaryLoot"></div>
+    <div class="modal-msg" id="summaryInventory"></div>
+    <div class="modal-msg" id="summaryTurns"></div>
+    <div class="playstyle-read" id="summaryPlaystyle"></div>
+    <button class="big-btn" id="summaryContinueBtn">Back to the Map →</button>
+  </div>
+
+  <div id="inventoryBar">
+    <div id="inventoryLabel">Stash · <span id="invCount">0</span>/2 · tap an item to sell</div>
+    <div id="invSlots"></div>
+  </div>
+  <div id="toast"></div>
+
+  <div class="overlay" id="invFullOverlay">
+    <div class="modal-box">
+      <div class="modal-title">🎒 Stash Full</div>
+      <div class="modal-msg">Pick an item to swap out for the new one, or sell the new item outright at its base price.</div>
+      <div id="invFullOptions"></div>
+    </div>
+  </div>
+
+  <div class="overlay" id="khoWarnOverlay">
+    <div class="modal-box" style="text-align:center;">
+      <div class="modal-title">🎒 Your Stash Still Has Loot</div>
+      <div class="modal-msg" id="khoWarnMsg"></div>
+      <div class="modal-actions">
+        <button class="rbtn rbtn-skip" id="khoWarnBack"><span class="rbtn-title">Go Back and Sell</span></button>
+        <button class="rbtn rbtn-scam" id="khoWarnProceed"><span class="rbtn-title">Leave Anyway</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="sellInvOverlay">
+    <div class="modal-box" style="text-align:center;">
+      <div class="modal-title">Sell This Treasure?</div>
+      <div class="modal-msg" id="sellInvMsg"></div>
+      <div class="modal-actions">
+        <button class="rbtn rbtn-skip" id="sellInvCancel"><span class="rbtn-title">Cancel</span></button>
+        <button class="rbtn rbtn-sell" id="sellInvOk"><span class="rbtn-title">SELL</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="outOfTurnsOverlay">
+    <div class="modal-box" style="text-align:center;">
+      <div class="modal-title">⛔ Out of Turns!</div>
+      <div class="modal-msg" id="outOfTurnsMsg">Bribe the guard for 1 more Turn?</div>
+      <div class="modal-actions">
+        <button class="rbtn rbtn-buy" id="outOfTurnsBribe"><span class="rbtn-title">🤝 Bribe</span></button>
+        <button class="rbtn rbtn-scam" id="outOfTurnsExit"><span class="rbtn-title">End the Run</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="scamRiskOverlay">
+    <div class="modal-box">
+      <div class="modal-title">🎲 Scamming Without Collateral!</div>
+      <div class="modal-msg" id="scamRiskMsg"></div>
+      <div class="modal-actions">
+        <button class="rbtn rbtn-skip" id="scamRiskCancel"><span class="rbtn-title">Cancel</span></button>
+        <button class="rbtn rbtn-scam" id="scamRiskConfirm"><span class="rbtn-title">🎭 Scam Anyway</span></button>
+      </div>
+    </div>
+  </div>
+
+  <div class="overlay" id="scamResultOverlay">
+    <div class="modal-box scam-result-box" id="scamResultBox">
+      <div class="scam-result-emoji" id="scamResultEmoji">🎲</div>
+      <div class="scam-result-title" id="scamResultTitle"></div>
+      <div class="scam-result-amount" id="scamResultAmount"></div>
+      <div class="modal-msg" id="scamResultSub"></div>
+      <button class="rbtn rbtn-buy" id="scamResultContinue" style="width:100%;"><span class="rbtn-title">Continue</span></button>
+    </div>
+  </div>
+
+  <div id="tutDimScrim"></div>
+  <div class="overlay" id="tutorialOverlay">
+    <div class="modal-box tutorial-box">
+      <div class="modal-title" id="tutTitle"></div>
+      <div class="modal-msg" id="tutBody"></div>
+      <button class="rbtn rbtn-buy" id="tutCtaBtn" style="width:100%;"><span class="rbtn-title" id="tutCtaLabel">Got It</span></button>
+    </div>
+  </div>
+
+  <div class="overlay" id="endGameOverlay">
+    <div class="modal-box">
+      <div class="modal-title" id="endGameTitle">🏆 Escape Complete!</div>
+      <div class="endgame-stars" id="endGameStars"></div>
+      <div class="endgame-badge" id="endGameBadge"></div>
+      <div class="endgame-badge-desc" id="endGameBadgeDesc"></div>
+      <div class="modal-msg">Total loot carried out: <b id="endGameLoot"></b></div>
+      <div class="modal-msg" id="endGameMsg"></div>
+      <div class="endgame-stat-row"><span id="endGameStatCombo"></span><span id="endGameStatScam"></span></div>
+      <button class="rbtn rbtn-buy" id="endGameContinue" style="width:100%;margin-top:12px;"><span class="rbtn-title">Play Again From Scratch</span></button>
+    </div>
+  </div>
+
+  <div class="overlay" id="helpOverlay">
+    <div class="modal-box">
+      <div class="modal-title">Rules of the Game</div>
+      <div class="rules-sec">
+        <h4>🎯 Invest Turns = Choose Your Own Odds (a 9-Sided Die)</h4>
+        <ul>
+          <li>Every item has a 1-Turn floor — the more Turns you invest in ONE item, the better its odds of coming up Real. You pick this right on the item's detail screen, before you Steal it.</li>
+          <li>Green (400k): 1 Turn → 3–9 Real · 2 Turns (max) → 2–9 Real</li>
+          <li>Gold (700k): 1 Turn → 6–9 Real · 2 Turns → 5–9 Real · 3 Turns (max) → 4–9 Real</li>
+          <li>Red (1500k, doubles to 3000k in Stages 4-5): 1 Turn → 9–9 Real · 2 Turns → 8–9 Real · 3 Turns (max) → 7–9 Real — its ceiling stays well below Green/Gold even at full investment, so it's always the high-stakes bet.</li>
+          <li>⚠️ Only paying the 1-Turn floor without investing more leaves Gold/Red's odds of Real below 50% — a fine way to lose money if you're not careful!</li>
+        </ul>
+      </div>
+      <div class="rules-sec">
+        <h4>Real Items</h4>
+        <ul>
+          <li>Stash it to complete a matching set of 3 → sell all three for 2x profit</li>
+          <li>Or sell it right away for instant cash</li>
+        </ul>
+      </div>
+      <div class="rules-sec">
+        <h4>Fake Items</h4>
+        <ul>
+          <li>Ditch it — you lose that item's value outright</li>
+          <li>Or Scam to try and win it back</li>
+        </ul>
+      </div>
+      <div class="rules-sec">
+        <h4>🎭 Scamming</h4>
+        <ul>
+          <li>Holding a Green/Gold treasure as collateral → <strong>90% success rate</strong>: get back 60% (Green) / 40% (Gold) / 20% (Red) of the value of the item you're scamming; you always lose one random collateral treasure from your Stash, whether you succeed or not.</li>
+          <li>No collateral on hand → a straight 50/50 gamble: win 100% of the value (Green) / 80% (Gold) / 85% (Red); lose and you're out 2x (Green/Gold) or 1.3x (Red) that value.</li>
+        </ul>
+      </div>
+      <div class="rules-sec">
+        <h4>🎒 The Stash</h4>
+        <ul>
+          <li>Holds only 2 items at a time</li>
+          <li>Once it's full, swap an old item for the new one, or just sell the new item outright</li>
+          <li>Tap any stashed item at any time to sell it at its current price</li>
+        </ul>
+      </div>
+      <div class="rules-sec">
+        <h4>🕊️ The No-Scam Path</h4>
+        <ul>
+          <li>Never Scam once during the entire run (only Ditch fakes) → you can still reach 3★, just at a lower bar (9750k instead of 13000k)</li>
+          <li>A single Scam anywhere in the run closes off this path for that run</li>
+        </ul>
+      </div>
+      <div class="rules-sec">
+        <h4>🗺️ The 5 Heists</h4>
+        <ul>
+          <li>Abandoned Church → Merchant Guild → Royal Museum → Noble Treasury → King's Vault</li>
+          <li>Cost to Steal: a -1 Turn floor for every color, with the option to invest more to raise your odds of Real (see "Invest Turns" above). Leaving a room costs nothing.</li>
+          <li>⚠️ You only get 25 Turns for ALL 5 heists combined — spend them wisely!</li>
+          <li>Out of Turns? Bribe the guard for 1 more — it gets cheaper in later stages, but pricier the more times you bribe within a single run. Or just end the run there.</li>
+          <li>🎯 Goal: complete all 5 heists and walk away with as much loot as possible.</li>
+        </ul>
+      </div>
+      <div class="modal-actions">
+        <button class="rbtn rbtn-buy" id="helpCloseBtn" style="flex:1;"><span class="rbtn-title">Got It</span></button>
+      </div>
+    </div>
+  </div>
+</div>
+<script>
+(function(){
+  const COLORS = {
+    xanh:{name:'Green', tier:'Common', sell:400},
+    vang:{name:'Gold', tier:'Rare', sell:700},
+    do:  {name:'Red', tier:'Ultra Rare', sell:1500}
+  };
+  // Cost-as-risk-dial: every color has a 1-Turn floor, and each EXTRA Turn
+  // the player chooses to invest in one specific item lowers its threshold
+  // by 1 rung (whole-number "X-9 Real" labels, same language the roll-rule
+  // pill already used — no percentages, matches how the die already reads).
+  // The player picks this live in the item detail view before committing,
+  // instead of the odds being randomly pre-assigned per item like the old
+  // tier system — this is what actually gives the player a lever to pull,
+  // rather than a number to passively read. Sell value is now FIXED per
+  // color (no more tier-varied payout) so only one thing varies at a time,
+  // which is much easier to price mentally than the old double-varying tier.
+  // Floor-only play is a losing bet for Gold/Red (sub-50% odds) on purpose —
+  // never investing extra isn't a safe default, you have to actively decide
+  // how much risk you're taking on THIS item, right now.
+  const FLOOR_COST = 1;
+  // Green dropped its worst rung (no more 4-9 floor) — cheapest option is
+  // now 3-9 (77.8%), max cost fell from 3 to 2. Gold's whole ladder shifted
+  // to easier odds at the SAME cost band (floor 6-9/44.4% up to 4-9/66.7%
+  // at cost 3, +11.1pp better than before at every rung). Red collapsed from
+  // 5 stage-banded rungs down to 3 flat rungs shared by every stage — max
+  // achievable odds is now capped at 7-9 (33.3%) even at full investment
+  // (cost 3, down from cost 5), so Red stays a real coinflip-or-worse "go
+  // all-in on one big bet" even for a maxed-out bet, it just costs less to
+  // find that out.
+  const LADDER = {
+    xanh: [2, 1],       // floor:3-9 Real(77.8%) -> +1 cap:2-9(88.9%)
+    vang: [5, 4, 3],    // floor:6-9 Real(44.4%) -> +1:5-9(55.6%) -> +2 cap:4-9(66.7%)
+  };
+  function doLadder(stageId){
+    return [8, 7, 6];   // floor:9-9(11.1%) -> +1:8-9(22.2%) -> +2 cap:7-9(33.3%) — same for every stage now
+  }
+  function ladderOf(color, stageId){
+    return color==='do' ? doLadder(stageId) : LADDER[color];
+  }
+  function sellOf(color, stageId){
+    if(color==='do') return stageId>=4 ? 3000 : 1500;
+    return COLORS[color].sell;
+  }
+  function tierLabel(threshold){ return `${threshold+1}-9`; }
+
+  // Archetype is an item attribute INDEPENDENT of color — it doesn't touch
+  // real/fake odds at all, only what the item is *good for* once you have
+  // it. Exactly 3 types so it can reuse the same "shuffle without
+  // replacement per same-color group in a stage" trick the old tier system
+  // used (max same-color group size in any stage is 3, same as the pool).
+  const ARCHETYPE_POOL = [
+    {id:"merchant", name:"Merchant", icon:"💰", description:"If it turns out REAL: <span class=\"arch-hl\">+20%</span> sell price."},
+    {id:"collector", name:"Collector", icon:"🏺", description:"Completing a set of 3: the more Collectors in the set, the bigger the payout (<span class=\"arch-hl\">x2 → x2.67</span>)."},
+    {id:"blackmarket", name:"Black Market", icon:"🎭", description:"If it's FAKE and you Scam: <span class=\"arch-hl\">+15%</span> collateral refund (Stash has items), or <span class=\"arch-hl\">+10%</span> winnings, still 50/50 (Stash is empty)."}
+  ];
+  const ARCHETYPE_BY_ID = Object.fromEntries(ARCHETYPE_POOL.map(a=>[a.id,a]));
+  const ARCHETYPE_INVEST_HINT = {
+    merchant: "Worth investing more if you want a sure thing — only pays off if it's Real.",
+    collector: "Invest more if you're chasing a matching set of 3 — the payoff is big once it's complete.",
+    blackmarket: "Even a Fake is fine thanks to the Scam bonus — no need to invest much."
+  };
+  // Collector's combo bonus scales with how many of the 3 pieces in a
+  // completed set are themselves Collector-archetype — not all-or-nothing
+  // on just the completing item. 0 -> 6x (baseline x2), 3 -> 8x (x2.67).
+  function collectorMultiplier(collectorCount){
+    return 6 + collectorCount*(2/3);
+  }
+  const NAMES = {
+    xanh:['Emerald Ring','Sapphire Pendant','Jade Hairpin','Jadeite Bracelet','Verdant Talisman'],
+    vang:['Gilded Crown','Golden Chalice','Amber Necklace','Gilt Seal','Ancient Gold Hairpin'],
+    do:  ["Dragon's Blood Gem",'Ruby Heart','Crimson Flame Scepter','Blood-Fire Cross','Black Ruby Crown']
+  };
+  const SHAPES = ['gem','ring','coin','chalice'];
+  const ORDER = ['xanh','vang','do'];
+  const MAX_SLOTS = 2;
+  // Stored (unsold) items lose value each stage that passes without being
+  // sold — compounding, so remaining% doubles as the "how lit is the fan"
+  // visual directly (0.88^stagesHeld). Calibrated via Monte Carlo: ~12%/
+  // stage costs a combo-chasing run about -4% total loot on average (mostly
+  // hitting speculative multi-stage hoards; same-stage 3-of-a-kind combos —
+  // Green@Stage1, Gold@Stage2, Red@Stage5 — never cross a stage boundary so
+  // they're untouched by this at all).
+  const DECAY_RATE = 0.12;
+  const SHADES = {
+    xanh:{base:'#4caf6d',light:'#a6e3bb'},
+    vang:{base:'#e0b23c',light:'#f5da97'},
+    do:  {base:'#d1495c',light:'#f2a3af'}
+  };
+
+  const EMOJI = {
+    grab:'✋', bag:'🎒', cash:'💰', sellall:'🤑', scam:'🎭', trash:'🗑️'
+  };
+  function icon(name){ return `<span class="rbtn-emoji">${EMOJI[name]}</span>`; }
+
+  function shapePaths(kind, s){
+    if(kind==='ring'){
+      return `<circle cx="32" cy="38" r="16" fill="none" stroke="${s.base}" stroke-width="9"/>
+        <polygon points="32,10 40,20 32,27 24,20" fill="${s.light}"/>`;
+    }
+    if(kind==='coin'){
+      return `<circle cx="32" cy="32" r="22" fill="${s.base}"/>
+        <circle cx="32" cy="32" r="15" fill="none" stroke="${s.light}" stroke-width="2" opacity=".7"/>`;
+    }
+    if(kind==='chalice'){
+      return `<path d="M18 10 Q18 30 32 30 Q46 30 46 10 Z" fill="${s.base}"/>
+        <rect x="28" y="30" width="8" height="18" fill="${s.base}"/>
+        <ellipse cx="32" cy="50" rx="14" ry="4" fill="${s.base}"/>
+        <path d="M20 12 Q32 22 44 12" fill="none" stroke="${s.light}" stroke-width="2.5" opacity=".7"/>`;
+    }
+    return `<polygon points="14,26 50,26 38,10 26,10" fill="${s.light}"/>
+      <polygon points="14,26 50,26 32,54" fill="${s.base}"/>`;
+  }
+  function itemSVG(color, shape){
+    const s = SHADES[color];
+    let accessory = '';
+    if(color==='vang'){
+      accessory = `<path d="M12 40 Q6 34 9 26 Q13 32 17 34 Z" fill="#c1793f" opacity=".85"/>
+                   <path d="M52 40 Q58 34 55 26 Q51 32 47 34 Z" fill="#c1793f" opacity=".85"/>`;
+    }
+    if(color==='do'){
+      accessory = `<path d="M22 8 L27 14 L32 6 L37 14 L42 8 L39 18 L25 18 Z" fill="#c1793f"/>`;
+    }
+    return `<svg viewBox="0 0 64 64" xmlns="http://www.w3.org/2000/svg">${accessory}${shapePaths(shape, s)}</svg>`;
+  }
+
+  // 5 named heist locations. Icons + risk/reward stars are shown in the
+  // World Map hover tooltip regardless of lock state, so the player can
+  // plan ahead before ever unlocking a stage.
+  const STAGES = [
+    {id:1, name:"Abandoned Church", icon:'⛪', blurb:"A church with a handful of trinkets — decent enough to sell.", risk:1, reward:1},
+    {id:2, name:"Merchant Guild", icon:'🏛️', blurb:"A merchant guild hall — lots of small safes, guards spread thin.", risk:2, reward:2},
+    {id:3, name:"Royal Museum", icon:'🖼️', blurb:"The royal museum — real antiques start showing up here.", risk:3, reward:3},
+    {id:4, name:"Noble Treasury", icon:'💰', blurb:"A noble's treasury — the guard presence steps up considerably.", risk:4, reward:4},
+    {id:5, name:"King's Vault", icon:'👑', blurb:"The single most expensive pieces are locked away in here...", risk:5, reward:5}
+  ];
+  // Fixed per-stage color template, derived from Monte Carlo balance analysis
+  // (see Fools_Gold_Balance_Analysis_v2.docx) rather than picked by feel.
+  // Stage 5's last 2 slots are randomized Green/Gold so the finale is never a
+  // deterministic wall of Red — it's always "mostly Red" but still a decision.
+  const SAGA_FIXED = [
+    {xanh:3, vang:1, do:0},
+    {xanh:1, vang:3, do:0},
+    {xanh:2, vang:2, do:1},
+    {xanh:1, vang:2, do:2},
+    {xanh:null, vang:null, do:3}
+  ];
+  const SAGA5_REMAINDER_XANH_W = 0.35;
+  const START_TURNS = 25;
+  // Stash shrunk 3->2 slots: you can no longer both build toward a combo AND
+  // keep spare collateral at the same time — storing is now a real
+  // trade-off instead of a strictly-dominant move.
+  const SCAM_REFUND_PCT = {xanh:.6, vang:.4, do:.2}; // collateral scam payout % if it succeeds
+  const COLLATERAL_SCAM_SUCCESS_PCT = 0.9; // 90% success — safer than risky scam (50/50) but no longer guaranteed
+  // Risky (no-collateral) scam params are per-color. Green/Gold got a harsher
+  // fail penalty (1.5x -> 2x) so "always scam, never discard" isn't a free
+  // lunch anymore. Red deliberately keeps a gentler fail penalty and a higher
+  // success%, so "take Red without collateral and wing the scam" becomes a
+  // legitimate high-variance alternative to the "safe, collateral-backed"
+  // playstyle — Monte Carlo checks put its mean loot within ~5% of the safe
+  // strategy's, with a comparable tail, instead of being strictly worse.
+  const NO_COLLATERAL_SUCCESS_PCT = {xanh:1.0, vang:.8, do:.85};
+  const NO_COLLATERAL_FAIL_MULT = {xanh:2.0, vang:2.0, do:1.3};
+  // Re-checked via Monte Carlo after the ladder redesign above (Red's max
+  // achievable odds capped at 33.3% instead of 55.6-66.7%, cheaper Green/
+  // Gold). Under a full-run EV-optimal policy with Archetype active, mean
+  // loot actually DROPPED from ~9300k to ~6000k despite Green/Gold being
+  // easier — Red was carrying most of the total value before, so shrinking
+  // its ceiling shrinks the whole run's upside. It's also higher-variance
+  // now: even optimal play busts (ends negative) on roughly 1 in 5 runs,
+  // since a maxed-out Red bet is still worse than a coinflip. That's an
+  // intentional side effect of the ladder change (Red stays genuinely risky
+  // even fully invested), not something thresholds can fix — flagging it
+  // here rather than papering over it. Thresholds came back down close to
+  // the very first calibration this game shipped with:
+  //   1★ = 0k     (didn't lose money — unlucky/careless runs do go negative)
+  //   2★ = 6000k  (clearly above typical play, needs good investment calls)
+  //   3★ = 13000k (near-max territory — requires consistently sharp picks)
+  const STAR_THRESHOLDS = [0, 6000, 13000];
+  // A never-scam ("Ditch" only) run caps out lower in simulation — instead of
+  // locking clean play out of 3★ entirely, it gets its own, lower bar (kept
+  // at the same 0.75 ratio to the standard bar as before). One single Scam
+  // anywhere in the run closes this path for that run (falls back to the
+  // standard 13000k bar).
+  const PURE_3STAR_THRESHOLD = 9750;
+
+  let state;
+  let lastCardIndex = null;
+  // Bumped on every MANUAL navigation. Nothing in this build auto-advances
+  // the player anymore (no auto-chaining to the next item, no auto-continue
+  // to the next stage) — every transition is a deliberate click, per the
+  // "5 independent heist decisions" design goal. navToken is kept only to
+  // guard the roll animation's setTimeout against a stale render after the
+  // player has already navigated away mid-roll.
+  let navToken = 0;
+  let pendingScamIdx = null;
+  let pendingInvFullItem = null; // {idx, color, shape, sellValue, name}
+  let pendingSellInvIndex = null;
+  let selectedExtra = 0; // which extra-investment rung the +/- stepper is on for the current item (real stages only), reset on every navigation
+
+  // ---------------------------------------------------------- sim tutorial
+  // The guided practice round is a real (but separate) mini heist: 3 fixed
+  // items (Green/Gold/Red) with forced roll outcomes, played through the exact
+  // same take/sell/store/discard/scam functions as the real game so nothing
+  // is duplicated. `simStep` drives a linear script of popups + tile locks;
+  // it's the only thing that makes this room behave differently from a
+  // normal stage.
+  let simStep = 'pending_intro'; // see checkSim* functions below for the full sequence
+  let simArchetypeTutorialShown = false; // fires once, first time any sim item is opened
+  let simScriptQueue = [];
+
+  function freshState(){
+    return {
+      screen:'intro', // 'intro' | 'stage' (sim uses this too) | 'map' | 'summary'
+      turns: START_TURNS,
+      loot: 0,
+      sagaPlan: generateSagaPlan(),
+      currentStage: 1,
+      stageStartLoot: 0,
+      items: [],
+      viewIndex: null,
+      inventory: [],
+      scamCount:0, comboCount:0, riskyScamCount:0, riskyScamWinCount:0, collateralScamCount:0, discardCount:0, doRealCount:0, bribesUsed:0,
+      rolling:false,
+      lastStageResult: null,
+      endOutcome: null
+    };
+  }
+
+  function generateSagaPlan(){
+    const plan = [];
+    for(let i=0;i<5;i++){
+      const tmpl = SAGA_FIXED[i];
+      const xanhItems = [], vangItems = [], doItems = [];
+      if(i===4){
+        for(let k=0;k<2;k++){
+          if(Math.random() < SAGA5_REMAINDER_XANH_W) xanhItems.push('xanh');
+          else vangItems.push('vang');
+        }
+        doItems.push('do','do','do');
+      } else {
+        for(let k=0;k<tmpl.xanh;k++) xanhItems.push('xanh');
+        for(let k=0;k<tmpl.vang;k++) vangItems.push('vang');
+        for(let k=0;k<tmpl.do;k++) doItems.push('do');
+      }
+      plan.push([...xanhItems, ...vangItems, ...doItems]);
+    }
+    return plan;
+  }
+  // Fisher-Yates shuffle of the 3 archetype ids, sliced to n — guarantees no
+  // repeat within a single same-color group (n is at most 3, same as the
+  // pool size), while different colors/stages are free to repeat.
+  function pickArchetypesForGroup(n){
+    const ids = ARCHETYPE_POOL.map(a=>a.id);
+    for(let i=ids.length-1;i>0;i--){
+      const j = Math.floor(Math.random()*(i+1));
+      [ids[i],ids[j]] = [ids[j],ids[i]];
+    }
+    return ids.slice(0, n);
+  }
+  function makeStageItems(stageNum){
+    const colors = state.sagaPlan[stageNum-1];
+    // threshold/sellValue are no longer assigned here — the player now
+    // chooses their own odds by picking an investment level at take-time
+    // (see takeItemReal + the +/- stepper UI in renderItemCard below).
+    // Archetype IS assigned here (independent of color), grouped so a
+    // same-color group within this stage never repeats an archetype.
+    const archByColor = {};
+    ['xanh','vang','do'].forEach(c=>{
+      const count = colors.filter(x=>x===c).length;
+      if(count>0) archByColor[c] = pickArchetypesForGroup(count);
+    });
+    const cursor = {xanh:0, vang:0, do:0};
+    return colors.map(c=>({
+      color:c, resolved:false, rolled:false, quality:null, rollValue:null, choice:null,
+      name: NAMES[c][Math.floor(Math.random()*NAMES[c].length)],
+      shape: SHAPES[Math.floor(Math.random()*SHAPES.length)],
+      archetype: archByColor[c][cursor[c]++]
+    }));
+  }
+  // The 3 fixed practice items. Green always rolls real, Gold always rolls
+  // fake (forceQuality, same trick the very first version of this game used
+  // for its practice round) — Red is deliberately left un-rollable: it costs
+  // 3 turns and the script only leaves the player 2 by the time they reach
+  // it, so they experience "can't afford it, here's how to get more turns"
+  // instead of a scripted roll.
+  function makeSimItems(){
+    // Practice room always uses each color's anchor/"standard" tier so the
+    // tutorial numbers stay simple and predictable. Archetypes here are
+    // fixed (not randomized) and deliberately paired with the item where
+    // their bonus is most visible, so the practice run doubles as an
+    // Archetype demo: green (forced real) -> Collector ties to the Stash
+    // hint already shown; gold (forced fake) -> Black Market visibly boosts
+    // the Scam numbers in the tutorial popup; red (real roll) -> Merchant
+    // shows the +20% sell bump on the highest-value item.
+    // threshold/sellValue are no longer hardcoded here — sim now uses the
+    // SAME +/- stepper + takeItemReal flow as real stages (stageId=1), so
+    // they get set dynamically at take-time just like makeStageItems.
+    return [
+      {color:'xanh', resolved:false, rolled:false, quality:null, rollValue:null, choice:null,
+        name:'Practice Ring', shape:'gem', forceQuality:'xin', archetype:'collector'},
+      {color:'vang', resolved:false, rolled:false, quality:null, rollValue:null, choice:null,
+        name:'Practice Cup', shape:'coin', forceQuality:'dom', archetype:'blackmarket'},
+      {color:'do', resolved:false, rolled:false, quality:null, rollValue:null, choice:null,
+        name:'Practice Crown', shape:'chalice', forceQuality:null, archetype:'merchant'}
+    ];
+  }
+
+  // getThreshold/effectiveSell are gone — every item now carries its own
+  // fixed .threshold/.sellValue from the moment it's generated (see
+  // pickTier above + makeStageItems/makeSimItems below), since tier is
+  // randomized per-item rather than derived purely from color+stage.
+  function hasCollateral(){
+    return state.inventory.some(i=>i.color==='xanh'||i.color==='vang');
+  }
+  function xinCountOf(color){
+    return state.inventory.filter(i=>i.color===color).length;
+  }
+  function starsForLoot(loot, scamCount){
+    if(loot>=STAR_THRESHOLDS[2]) return 3;
+    if((scamCount||0)===0 && loot>=PURE_3STAR_THRESHOLD) return 3;
+    if(loot>=STAR_THRESHOLDS[1]) return 2;
+    if(loot>=0) return 1;
+    return 0;
+  }
+  // Cost of the next Bribe the Guard: cheaper in later stages (guards get
+  // more corruptible as the heist drags on), but each additional bribe
+  // within the SAME run costs more than the last, so it's a real late-game
+  // lifeline rather than a spammable "buy more turns" button. The practice
+  // round always uses the flat original price since its tutorial text
+  // hardcodes that number.
+  function getBribeCost(usedOverride){
+    if(state.currentStage==='sim') return 500;
+    const stageNum = typeof state.currentStage==='number' ? state.currentStage : 1;
+    const base = Math.max(200, 500 - 50*(stageNum-1));
+    const used = usedOverride!==undefined ? usedOverride : (state.bribesUsed||0);
+    return base + 150*used;
+  }
+  // Black Market only pays off on a FAKE item taken to scam — no
+  // benefit on a normal sale. Bonus stacks on top of the base per-color
+  // rates: +15pp refund% (collateral scam), +10pp gain% and x0.7 fail-mult
+  // (risky scam) — capped at 100% so it can't guarantee a refund/gain.
+  function scamRefundPct(it){
+    let p = SCAM_REFUND_PCT[it.color];
+    if(it.archetype==='blackmarket') p = Math.min(1, p+0.15);
+    return p;
+  }
+  function riskyScamGainPct(it){
+    let p = NO_COLLATERAL_SUCCESS_PCT[it.color];
+    if(it.archetype==='blackmarket') p = Math.min(1, p+0.10);
+    return p;
+  }
+  function riskyScamFailMult(it){
+    let m = NO_COLLATERAL_FAIL_MULT[it.color];
+    if(it.archetype==='blackmarket') m = m*0.7;
+    return m;
+  }
+  function riskyScamOddsLabel(it){
+    return it.archetype==='blackmarket' ? '50/50 (Black Market bonus)' : '50/50';
+  }
+  function scamSubText(it, sellVal){
+    if(hasCollateral()){
+      const p = scamRefundPct(it);
+      const pct = Math.round(p*100);
+      const refund = Math.round(p*sellVal);
+      const succPct = Math.round(COLLATERAL_SCAM_SUCCESS_PCT*100);
+      return {sub:`${succPct}% success: get back ${pct}% of the value (+${refund}k) · always lose 1 Green/Gold collateral piece`, collateral:true, refund, pct};
+    }
+    const gain = Math.round(riskyScamGainPct(it)*sellVal);
+    const loss = Math.round(riskyScamFailMult(it)*sellVal);
+    return {sub:`No collateral → gamble at ${riskyScamOddsLabel(it)}: win +${gain}k / lose -${loss}k`, collateral:false, gain, loss};
+  }
+
+  function toast(msg, ms=2400){
+    const el = document.getElementById('toast');
+    el.textContent = msg;
+    el.classList.add('show');
+    clearTimeout(toast._t);
+    toast._t = setTimeout(()=>el.classList.remove('show'), ms);
+  }
+
+  // ---------------------------------------------------------------- render
+  function render(){
+    document.getElementById('turnsVal').textContent = state.turns;
+    document.getElementById('lootVal').textContent = state.loot+'k';
+    document.getElementById('invCountVal').textContent = state.inventory.length+'/'+MAX_SLOTS;
+    const bribesUsedNow = state.bribesUsed||0;
+    const bribeCostNow = getBribeCost(bribesUsedNow);
+    const bribeBtnEl = document.getElementById('bribeBtn');
+    bribeBtnEl.disabled = state.loot < bribeCostNow || state.rolling;
+    if(!bribeBtnEl.classList.contains('bribing')){
+      bribeBtnEl.innerHTML = `BRIBE<br>-${bribeCostNow}k +1`;
+    }
+
+    document.getElementById('introScreen').style.display = state.screen==='intro' ? 'block' : 'none';
+    document.getElementById('worldMapScreen').style.display = state.screen==='map' ? 'block' : 'none';
+    document.getElementById('stageScreen').style.display = state.screen==='stage' ? 'block' : 'none';
+    document.getElementById('summaryScreen').style.display = state.screen==='summary' ? 'block' : 'none';
+
+    renderInventory();
+    renderStarGoalBar();
+
+    if(state.screen==='map') renderWorldMap();
+    if(state.screen==='stage') renderStageScreen();
+    if(state.screen==='summary') renderSummaryScreen();
+  }
+
+  function renderStarGoalBar(){
+    const bar = document.getElementById('starGoalBar');
+    // Only meaningful once the real 5-stage run is underway — the practice
+    // round has its own separate starting-loot budget that isn't tied to these goals.
+    const show = state.currentStage!=='sim' && (state.screen==='map'||state.screen==='stage'||state.screen==='summary');
+    if(!show){ bar.style.display='none'; return; }
+    bar.style.display='block';
+    const pureStillOpen = (state.scamCount||0)===0;
+    const stars = starsForLoot(state.loot, state.scamCount);
+    if(stars>=3){
+      const viaPure = pureStillOpen && state.loot<STAR_THRESHOLDS[2];
+      bar.innerHTML = viaPure
+        ? `🏆🕊️ You've hit <b>3★</b> via the No-Scam path! (${state.loot}k)`
+        : `🏆 You've hit the max <b>3★</b>! (${state.loot}k)`;
+      return;
+    }
+    if(stars===2){
+      // Two roads to 3★ from here: the standard 12000k bar, or the lower
+      // 9000k "pure" bar — but only while it's still open (zero Scams so far).
+      const target = pureStillOpen ? Math.min(STAR_THRESHOLDS[2], PURE_3STAR_THRESHOLD) : STAR_THRESHOLDS[2];
+      const need = target - state.loot;
+      const note = pureStillOpen ? ' (no Scams)' : '';
+      bar.innerHTML = `🎯 Need <b>${need}k</b> more profit to reach ⭐⭐⭐ (3★)${note}`;
+      return;
+    }
+    const nextThreshold = STAR_THRESHOLDS[stars];
+    const need = nextThreshold - state.loot;
+    const nextStars = stars+1;
+    bar.innerHTML = `🎯 Need <b>${need}k</b> more profit to reach ${'⭐'.repeat(nextStars)}${'☆'.repeat(3-nextStars)} (${nextStars}★)`;
+  }
+
+  // ------------------------------------------------------------ world map
+  function renderWorldMap(){
+    const list = document.getElementById('mapList');
+    list.innerHTML = '';
+    STAGES.forEach((stage,i)=>{
+      if(i>0){
+        const conn = document.createElement('div');
+        conn.className = 'map-connector';
+        list.appendChild(conn);
+      }
+      const isDone = stage.id < state.currentStage;
+      const isCurrent = stage.id === state.currentStage;
+      const isLocked = stage.id > state.currentStage;
+      const node = document.createElement('div');
+      node.className = 'map-node' + (isCurrent?' current':'') + (isDone?' done':'') + (isLocked?' locked':'');
+      // Sparkle row sourced from sagaPlan (fixed at run start, including the
+      // randomized stage-5 tail) — one colored sparkle per item, so the
+      // player can see both the color mix and the item count at a glance.
+      const planColors = (state.sagaPlan && state.sagaPlan[stage.id-1]) || [];
+      const sparkleHtml = planColors.length
+        ? `<div class="map-node-sparkles">${planColors.map(c=>`<span class="map-node-sparkle color-${c}">✦</span>`).join('')}</div>`
+        : '';
+      node.innerHTML = `
+        <div class="map-node-illust">${stage.icon}</div>
+        <div class="map-node-body">
+          <div class="map-node-num">Stage ${stage.id}</div>
+          <div class="map-node-name">${stage.name}</div>
+          <div class="map-node-status">${isDone?'Already Robbed':isCurrent?'Ready to Break In':'Not Unlocked Yet'}</div>
+          ${sparkleHtml}
+        </div>
+        ${isDone?'<div class="map-node-check">✓</div>':''}
+        ${isLocked?'<div class="map-node-lock">🔒</div>':''}
+      `;
+      // Hover tooltip works for ALL nodes regardless of lock state — the
+      // player can scout risk/reward for every stage before it unlocks.
+      // (Deliberately NOT using the native `disabled` attribute anywhere
+      // here, since disabled elements don't reliably fire hover events —
+      // that was the cause of the earlier "only unlocked stages" bug.)
+      node.addEventListener('mouseenter', (e)=>showMapTooltip(stage, e));
+      node.addEventListener('mousemove', (e)=>showMapTooltip(stage, e));
+      node.addEventListener('mouseleave', hideMapTooltip);
+      node.addEventListener('click', ()=>{
+        // Only the current stage can actually be entered — completed
+        // stages stay visible as a trophy trail but don't replay (each
+        // heist is a one-time decision), future ones are locked.
+        if(stage.id === state.currentStage) enterStage(stage.id);
+      });
+      list.appendChild(node);
+    });
+    document.getElementById('giveUpMapBtn').style.display = state.turns<=0 ? 'block' : 'none';
+  }
+  function showMapTooltip(stage, evt){
+    const tip = document.getElementById('mapTooltip');
+    tip.innerHTML = `
+      <div class="map-tooltip-name">${stage.name}</div>
+      <div class="map-tooltip-row"><span>Risk</span><span class="map-tooltip-stars risk">${'★'.repeat(stage.risk)}${'☆'.repeat(5-stage.risk)}</span></div>
+      <div class="map-tooltip-row"><span>Reward</span><span class="map-tooltip-stars reward">${'★'.repeat(stage.reward)}${'☆'.repeat(5-stage.reward)}</span></div>
+      <div class="map-tooltip-blurb">${stage.blurb}</div>
+      ${stage.id>=4 ? '<div class="map-tooltip-do-note">😈 Red items pay 2x here!!!</div>' : ''}
+    `;
+    tip.style.left = (evt.clientX+16)+'px';
+    tip.style.top = (evt.clientY+16)+'px';
+    tip.style.display = 'block';
+  }
+  function hideMapTooltip(){
+    document.getElementById('mapTooltip').style.display = 'none';
+  }
+  // Same instant-on-hover pattern as the map's risk/reward tooltip (no
+  // native `title` delay) — shows current + next 2 bribe costs.
+  function showBribeTooltip(evt){
+    const bribesUsedNow = state.bribesUsed||0;
+    const costNow = getBribeCost(bribesUsedNow);
+    const costNext = getBribeCost(bribesUsedNow+1);
+    const costNext2 = getBribeCost(bribesUsedNow+2);
+    const tip = document.getElementById('bribeTooltip');
+    tip.innerHTML = `
+      <div class="map-tooltip-name">Bribe the Guard</div>
+      <div class="map-tooltip-row"><span>This time</span><span>-${costNow}k · +1 Turn</span></div>
+      <div class="map-tooltip-row"><span>Next time</span><span>-${costNext}k</span></div>
+      <div class="map-tooltip-row"><span>Time after that</span><span>-${costNext2}k</span></div>
+    `;
+    tip.style.left = (evt.clientX+16)+'px';
+    tip.style.top = (evt.clientY+16)+'px';
+    tip.style.display = 'block';
+  }
+  function hideBribeTooltip(){
+    document.getElementById('bribeTooltip').style.display = 'none';
+  }
+
+  function enterStage(stageId){
+    navToken++;
+    state.screen = 'stage';
+    state.currentStage = stageId;
+    state.stageStartLoot = state.loot;
+    state.items = makeStageItems(stageId);
+    state.viewIndex = null;
+    render();
+  }
+
+  // ------------------------------------------------------------- sim entry
+  function enterSim(){
+    navToken++;
+    state.screen = 'stage';
+    state.currentStage = 'sim';
+    // 3 turns = exactly 1 floor-cost (FLOOR_COST=1) take per item, so green+
+    // gold at floor leave just 1 Turn for Red — enough for its floor bet but
+    // not enough to invest further without bribing, a real (not forced)
+    // reason to try the bribe button. Loot starts higher than before (1200
+    // instead of 500) so a 500k bribe stays affordable even in the worst
+    // case (Ditch on gold for -700k) — see the bribe-tutorial trigger below.
+    state.turns = 3;
+    state.loot = 1200;
+    state.inventory = [];
+    state.items = makeSimItems();
+    state.viewIndex = null;
+    simStep = 'pending_intro';
+    simArchetypeTutorialShown = false;
+    render();
+    runSimScript([
+      tutStep('🏺 Treasures In This Room', 'Green items pay less but land Real easily, while Red items pay big but are much harder to land — choose carefully.', 'Next →'),
+      tutStep('🚪 Leave Whenever You Want', 'You can leave at any time — staying longer might earn more, but you only get one shot at each heist.', 'Got It')
+    ], ()=>{ simStep='xanh_unlocked'; render(); });
+  }
+  function skipSim(){
+    navToken++;
+    startRealGame();
+  }
+  function startRealGame(){
+    const carry = freshState();
+    carry.screen = 'map';
+    state = carry;
+    simStep = 'pending_intro';
+    lastCardIndex = null;
+    render();
+  }
+
+  // ----------------------------------------------------- sim script runner
+  function tutStep(title, body, cta, highlightSelectors){ return {title, body, cta, highlight: highlightSelectors||[]}; }
+  function runSimScript(steps, onAllDone){
+    simScriptQueue = steps.slice();
+    runNextSimStep(onAllDone);
+  }
+  function runNextSimStep(onAllDone){
+    const step = simScriptQueue.shift();
+    if(!step){ if(onAllDone) onAllDone(); return; }
+    document.querySelectorAll('.tutorial-highlight').forEach(el=>el.classList.remove('tutorial-highlight'));
+    const titleEl = document.getElementById('tutTitle');
+    titleEl.textContent = step.title || '';
+    titleEl.style.display = step.title ? 'block' : 'none';
+    document.getElementById('tutBody').innerHTML = step.body;
+    document.getElementById('tutCtaLabel').textContent = step.cta;
+    (step.highlight||[]).forEach(sel=>{
+      const el = document.querySelector(sel);
+      if(el) el.classList.add('tutorial-highlight');
+    });
+    document.getElementById('tutDimScrim').style.display = 'block';
+    document.getElementById('tutorialOverlay').style.display = 'flex';
+    document.getElementById('tutCtaBtn').onclick = ()=>{
+      document.querySelectorAll('.tutorial-highlight').forEach(el=>el.classList.remove('tutorial-highlight'));
+      document.getElementById('tutDimScrim').style.display = 'none';
+      document.getElementById('tutorialOverlay').style.display = 'none';
+      runNextSimStep(onAllDone);
+    };
+  }
+
+  // -------------------------------------------------------------- stage UI
+  // Shared strip (sibling of both stageGridView and itemDetailView) so the
+  // player can see every stage's color/count makeup even while mid-roll or
+  // mid-decision on the current item — scouting isn't gated by which sub-view
+  // is active. Hidden during the practice room (sagaPlan doesn't apply there).
+  function renderStageMapPeek(){
+    const el = document.getElementById('stageMapPeek');
+    if(!el) return;
+    if(state.currentStage==='sim' || !state.sagaPlan){ el.style.display='none'; return; }
+    el.style.display='flex';
+    el.innerHTML = STAGES.map(stage=>{
+      const planColors = state.sagaPlan[stage.id-1] || [];
+      const sparkles = planColors.map(c=>`<span class="peek-sparkle color-${c}">✦</span>`).join('');
+      const isCurrent = stage.id===state.currentStage;
+      const isDone = stage.id < state.currentStage;
+      const isLocked = stage.id > state.currentStage;
+      return `<div class="stage-map-peek-item${isCurrent?' current':''}${isDone?' done':''}${isLocked?' locked':''}">
+        <div class="peek-num">S${stage.id}</div>
+        <div class="peek-sparkles">${sparkles}</div>
+      </div>`;
+    }).join('');
+  }
+  function renderStageScreen(){
+    renderStageMapPeek();
+    const gridView = document.getElementById('stageGridView');
+    const detailView = document.getElementById('itemDetailView');
+    if(state.viewIndex===null){
+      gridView.style.display = 'block';
+      detailView.style.display = 'none';
+      lastCardIndex = null;
+      renderStageGrid();
+      // Final sim popup fires once the player is back at the grid after
+      // having reached (and been unable to afford) the Red item.
+      if(state.currentStage==='sim' && simStep==='do_reached'){
+        simStep='finished';
+        runSimScript([
+          tutStep('👏 Well Done!',
+            `Your goal is to complete all 5 heists and walk away with as much profit as possible.<br><br>⭐ from ${STAR_THRESHOLDS[0]}k · ⭐⭐ from ${STAR_THRESHOLDS[1]}k · ⭐⭐⭐ from ${STAR_THRESHOLDS[2]}k`,
+            'Begin the Real Heist! →')
+        ], ()=>{ startRealGame(); });
+      }
+    } else {
+      gridView.style.display = 'none';
+      detailView.style.display = 'flex';
+      const changed = (lastCardIndex !== state.viewIndex);
+      if(changed) selectedExtra = 0;
+      renderItemCard(changed);
+      lastCardIndex = state.viewIndex;
+      // Fires once, the very first time the player opens ANY item in the
+      // practice room — spotlights the Archetype badge/description first
+      // (dimming everything else so it pops), then the +/- Turn stepper,
+      // instead of dumping both concepts as upfront text before they've
+      // even seen the real UI.
+      if(state.currentStage==='sim' && !simArchetypeTutorialShown && !state.rolling){
+        simArchetypeTutorialShown = true;
+        runSimScript([
+          tutStep('🎭 Item Archetype', "Every item has its own Archetype — it doesn't affect the odds of Real/Fake, but it adds a bonus depending on how you handle that item.", 'Next →', ['.archetype-badge','.archetype-desc']),
+          tutStep('🎯 Dial In Your Risk', 'Use the +/- buttons to choose how many extra Turns to spend on this item — the more you spend, the easier the roll, and the higher your odds of Real.', 'Got It', ['.invest-stepper'])
+        ]);
+      }
+      // The bribe-tutorial fires the instant the player opens (views) the
+      // Red item — purely gated on simStep=='vang_done', with NO turns check
+      // at all, so it always shows regardless of whether turns happen to be
+      // enough or not. (In practice the scripted 3-turn budget usually does
+      // leave the player short by the time they get here, but the popup
+      // itself doesn't depend on that.)
+      if(state.currentStage==='sim' && state.viewIndex===2 && simStep==='vang_done'){
+        simStep='do_reached_pending';
+        runSimScript([
+          tutStep('💰 Bribe the Guard', "Not enough Turns to invest more in the Red item? You can spend 500k to bribe the guard for +1 Turn.", 'Got It', ['#bribeBtn'])
+        ], ()=>{ simStep='do_reached'; });
+      }
+    }
+  }
+
+  function renderStageGrid(){
+    const isSim = state.currentStage==='sim';
+    document.getElementById('stageEyebrow').textContent = isSim ? 'Practice Stage' : `Stage ${state.currentStage}/5`;
+    document.getElementById('stageTitle').textContent = isSim ? 'Training Room' : STAGES[state.currentStage-1].name;
+    document.getElementById('exitStageBtn').style.display = isSim ? 'none' : 'block';
+    const wrap = document.getElementById('itemTiles');
+    wrap.innerHTML = '';
+    // If one item has already been rolled but not yet resolved (still needs
+    // Stash/Sell/Scam/Ditch), the player can back out to this grid to check
+    // the room, but every OTHER tile is locked until that decision is
+    // finished — only the pending tile itself (to go back and resolve it)
+    // stays open.
+    const pendingIdx = state.items.findIndex(x=>x.rolled && !x.resolved);
+    state.items.forEach((it,i)=>{
+      const isPending = it.rolled && !it.resolved;
+      const locked = (isSim && !simTileUnlocked(i)) || (pendingIdx!==-1 && pendingIdx!==i && !it.resolved);
+      const tile = document.createElement('div');
+      tile.className = 'item-tile' + (it.resolved?' resolved':'') + (locked?' locked':'') + (isPending?' pending':'');
+      // Grid tile now shows the item's Archetype (icon+name) instead of the
+      // odds preview — odds are read on the item card itself (live via the
+      // +/- stepper), so the tile is freed up to surface what the item is
+      // actually GOOD FOR instead.
+      const archLabel = it.archetype ? `<div class="item-tile-tier">${ARCHETYPE_BY_ID[it.archetype].icon} ${ARCHETYPE_BY_ID[it.archetype].name}</div>` : '';
+      tile.innerHTML = `
+        <div class="item-tile-icon color-${it.color}">${itemSVG(it.color, it.shape)}</div>
+        <div class="item-tile-name">${it.name}</div>
+        ${isPending ? `<div class="item-tile-status pending-status">⏳ Awaiting your decision</div>` : ''}
+        ${!it.resolved && !isPending ? archLabel : ''}
+        ${it.resolved ? `<div class="item-tile-status">${it.choice||''}</div>` : ''}
+      `;
+      if(!it.resolved && !locked){
+        tile.addEventListener('click', ()=>{
+          navToken++;
+          state.viewIndex = i;
+          render();
+        });
+      }
+      wrap.appendChild(tile);
+    });
+  }
+  function simTileUnlocked(i){
+    if(i===0) return simStep!=='pending_intro';
+    if(i===1) return !['pending_intro','xanh_unlocked','xanh_rolled','xanh_actionable'].includes(simStep);
+    if(i===2) return !['pending_intro','xanh_unlocked','xanh_rolled','xanh_actionable','xanh_done','vang_rolled','vang_actionable'].includes(simStep);
+    return true;
+  }
+
+  function renderItemCard(shouldSlide){
+    const idx = state.viewIndex;
+    const it = state.items[idx];
+    const c = COLORS[it.color];
+    const isSim = state.currentStage==='sim';
+    const stageId = isSim ? 1 : state.currentStage;
+    const sellVal = it.rolled ? it.sellValue : sellOf(it.color, stageId);
+    const card = document.getElementById('itemCard');
+    const ladder = ladderOf(it.color, stageId);
+    const previewMode = !it.rolled && !it.resolved;
+    const t = it.rolled ? it.threshold : ladder[selectedExtra];
+
+    let html = `<div class="item-name">${it.name}</div>`;
+    html += `<div class="rarity-badge color-${it.color}"><span class="rarity-dot"></span>${c.name} · ${c.tier} · ${sellVal}k</div>`;
+    if(it.archetype){
+      const arch = ARCHETYPE_BY_ID[it.archetype];
+      html += `<div class="archetype-badge">${arch.icon} ${arch.name}</div>`;
+      html += `<div class="archetype-desc">${arch.description}</div>`;
+    }
+    html += `<div class="roll-rule">
+      <span class="rule-pill fake">1–${t} Fake</span>
+      <span class="rule-pill real">${t+1}–9 Real</span>
+    </div>`;
+
+    let circlesHtml = '<div class="circles-row">';
+    for(let i=1;i<=9;i++){
+      let cls='circle';
+      if(it.rolled && i===it.rollValue) cls += it.quality==='xin' ? ' final-good' : ' final-bad';
+      circlesHtml += `<div class="${cls}">${i}</div>`;
+    }
+    circlesHtml += '</div>';
+    html += circlesHtml;
+    html += `<div class="item-frame color-${it.color}">${itemSVG(it.color, it.shape)}</div>`;
+
+    if(previewMode){
+      // +/- stepper right under the item image — adjusting it live-updates
+      // the roll-rule pill above (same ${'${t+1}'}-9 Real text) instead of
+      // picking from a static list of pre-written rows.
+      const stepCost = FLOOR_COST + selectedExtra;
+      const canDec = selectedExtra > 0;
+      const canInc = selectedExtra < ladder.length-1 && state.turns >= (FLOOR_COST + selectedExtra + 1);
+      html += `<div class="invest-stepper">
+        <button class="stepper-btn" id="investMinus" ${canDec?'':'disabled'}>−</button>
+        <div class="stepper-mid">
+          <div class="stepper-cost">${stepCost} Turns</div>
+          <div class="stepper-range">${tierLabel(ladder[selectedExtra])} Real</div>
+        </div>
+        <button class="stepper-btn" id="investPlus" ${canInc?'':'disabled'}>+</button>
+      </div>`;
+      if(it.archetype && ARCHETYPE_INVEST_HINT[it.archetype]){
+        html += `<div class="invest-hint">${ARCHETYPE_INVEST_HINT[it.archetype]}</div>`;
+      }
+    }
+
+    if(it.rolled){
+      html += `<div><span class="result-badge ${it.quality==='xin'?'xin':'dom'}">${it.quality==='xin'?'✓ REAL':'✕ FAKE'}</span> <span class="result-roll">Roll ${it.rollValue}</span></div>`;
+    }
+
+    if(state.rolling && !it.rolled){
+      html += `<div class="rolling-note">🎲 Unlocking your fortune...</div>`;
+    } else if(!it.rolled){
+      if(!it.resolved){
+        const chosenCost = FLOOR_COST + selectedExtra;
+        const canAfford = state.turns >= chosenCost;
+        html += `<div class="action-buttons">
+          <button class="rbtn rbtn-buy${isSim?' blink-cta':''}" id="takeBtn" ${canAfford?'':'disabled'}>
+            ${icon('grab')}<span class="rbtn-title">STEAL: -${chosenCost} Turns</span>
+            <span class="rbtn-sub">Think it through before you steal...</span>
+          </button>
+        </div>`;
+      } else {
+        html += `<div class="resolved-note">You skipped this item</div>`;
+      }
+    } else {
+      if(!it.resolved){
+        if(it.quality==='xin'){
+          const count = xinCountOf(it.color);
+          const khoFull = state.inventory.length >= MAX_SLOTS;
+          if(count>=2){
+            // Must match sellAllThree()'s actual payout exactly: average of
+            // the 2 stored pieces' CURRENT (possibly decayed) value plus
+            // this completing item's fresh value — NOT just the completing
+            // item alone, otherwise the button promises more than it pays.
+            const storedMatches = state.inventory.filter(x=>x.color===it.color).slice(0,2);
+            const storedCollectorCount = storedMatches.filter(x=>x.archetype==='collector').length;
+            const collectorCount = storedCollectorCount + (it.archetype==='collector'?1:0);
+            const mult = collectorMultiplier(collectorCount);
+            const avgVal = storedMatches.length===2
+              ? (storedMatches[0].sellValue + storedMatches[1].sellValue + sellVal) / 3
+              : sellVal;
+            const comboBonus = Math.round(mult*avgVal);
+            const anyDecayed = storedMatches.some(x=>x.decayStages>0);
+            html += `<div class="action-buttons">
+              <button class="rbtn rbtn-store" id="storeBtn" ${khoFull?'disabled':''}>
+                ${icon('bag')}<span class="rbtn-title">STASH</span>
+                <span class="rbtn-sub">${khoFull?'Stash full':'Set it aside'}</span>
+              </button>
+              <button class="rbtn rbtn-sellall" id="sellAllBtn">
+                ${icon('sellall')}<span class="rbtn-title">Sell All 3 - x${mult.toFixed(2)} Profit!!</span>
+                <span class="rbtn-sub">+${comboBonus}k${anyDecayed?' (stashed items have decayed)':''}</span>
+              </button>
+            </div>`;
+          } else {
+            html += `<div class="action-buttons">
+              <button class="rbtn rbtn-store" id="storeBtn" ${khoFull?'disabled':''}>
+                ${icon('bag')}<span class="rbtn-title">STASH</span>
+                <span class="rbtn-sub">${khoFull?'Stash full':'Stash it to complete a set of 3 → sell all for 2x profit'}</span>
+              </button>
+              <button class="rbtn rbtn-sell" id="sellBtn">
+                ${icon('cash')}<span class="rbtn-title">SELL</span>
+                <span class="rbtn-sub">+${sellVal}k</span>
+              </button>
+            </div>`;
+          }
+        } else {
+          const scamInfo = scamSubText(it, sellVal);
+          html += `<div class="action-buttons">
+            <button class="rbtn rbtn-skip" id="passBtn">
+              ${icon('trash')}<span class="rbtn-title">DITCH</span>
+              <span class="rbtn-sub">-${sellVal}k (item value lost)</span>
+            </button>
+            <button class="rbtn rbtn-scam" id="scamBtn">
+              ${icon('scam')}<span class="rbtn-title">SCAM</span>
+              <span class="rbtn-sub">${scamInfo.sub}</span>
+            </button>
+          </div>`;
+        }
+      } else {
+        html += `<div class="resolved-note">${it.choice}</div>`;
+      }
+    }
+
+    card.innerHTML = html;
+    if(shouldSlide){
+      card.classList.remove('slide-in');
+      void card.offsetWidth;
+      card.classList.add('slide-in');
+    }
+
+    const locked = state.rolling || (it.rolled && !it.resolved);
+    document.getElementById('arrowLeft').disabled = locked;
+    document.getElementById('arrowRight').disabled = locked;
+    document.getElementById('backBtn').disabled = state.rolling;
+
+    if(previewMode){
+      const minusBtn = document.getElementById('investMinus');
+      const plusBtn = document.getElementById('investPlus');
+      if(minusBtn) minusBtn.onclick = ()=>{
+        if(selectedExtra>0){ selectedExtra--; renderItemCard(false); }
+      };
+      if(plusBtn) plusBtn.onclick = ()=>{
+        if(selectedExtra<ladder.length-1 && state.turns>=(FLOOR_COST+selectedExtra+1)){ selectedExtra++; renderItemCard(false); }
+      };
+    }
+    if(!state.rolling && !it.rolled && !it.resolved){
+      const takeBtn = document.getElementById('takeBtn');
+      if(takeBtn) takeBtn.onclick = ()=> takeItemReal(idx, selectedExtra);
+    }
+    if(it.rolled && !it.resolved){
+      if(it.quality==='xin'){
+        document.getElementById('storeBtn').onclick = ()=>storeItem(idx);
+        const sellBtn = document.getElementById('sellBtn');
+        if(sellBtn) sellBtn.onclick = ()=>sellItem(idx);
+        const sellAllBtn = document.getElementById('sellAllBtn');
+        if(sellAllBtn) sellAllBtn.onclick = ()=>sellAllThree(idx);
+      } else {
+        document.getElementById('passBtn').onclick = ()=>discardFakeItem(idx);
+        document.getElementById('scamBtn').onclick = ()=>scamItem(idx);
+      }
+    }
+  }
+
+  // Shared by both the practice room AND real stages now (sim just pins
+  // stageId to 1, reproducing its old fixed floor numbers exactly). Cost =
+  // FLOOR_COST + the extra Turns the player picked with the +/- stepper.
+  // Locks in threshold/sellValue on the item right before the roll so every
+  // downstream function (discard/store/sell/scam/combo) keeps reading
+  // it.threshold/it.sellValue unchanged.
+  function takeItemReal(idx, extra){
+    const it = state.items[idx];
+    if(state.rolling || it.resolved) return;
+    const isSim = state.currentStage==='sim';
+    const stageId = isSim ? 1 : state.currentStage;
+    const ladder = ladderOf(it.color, stageId);
+    extra = Math.max(0, Math.min(ladder.length-1, extra));
+    const cost = FLOOR_COST + extra;
+    if(state.turns===0){
+      showOutOfTurns();
+      return;
+    }
+    if(state.turns<cost) return;
+    it.threshold = ladder[extra];
+    it.sellValue = sellOf(it.color, stageId);
+    state.turns -= cost;
+    state.rolling = true;
+    render();
+    animateRoll(idx);
+  }
+
+  function animateRoll(idx){
+    const it = state.items[idx];
+    const threshold = it.threshold;
+    let finalRoll;
+    if(it.forceQuality==='xin'){
+      finalRoll = (threshold+1) + Math.floor(Math.random()*(9-threshold));
+    } else if(it.forceQuality==='dom'){
+      finalRoll = 1 + Math.floor(Math.random()*threshold);
+    } else {
+      // No more near-miss "snap" forgiveness here — that existed to soften
+      // frustration from RANDOMLY-assigned odds. Now the player picks their
+      // own odds via the +/- stepper before rolling, so a miss reads as "I
+      // took a bet I chose" rather than "the game handed me bad luck."
+      finalRoll = 1 + Math.floor(Math.random()*9);
+    }
+    const quality = finalRoll > threshold ? 'xin' : 'dom';
+    const totalSteps = 18 + finalRoll;
+    let step = 0;
+    const myToken = navToken;
+
+    function tick(){
+      if(navToken!==myToken) return; // player navigated away mid-roll
+      const circles = document.querySelectorAll('#itemCard .circle');
+      circles.forEach(c=>c.classList.remove('active'));
+      const activeIdx = step % 9;
+      if(circles[activeIdx]) circles[activeIdx].classList.add('active');
+      step++;
+      if(step < totalSteps){
+        const delay = 55 + step*7;
+        setTimeout(tick, Math.min(delay, 260));
+      } else {
+        it.rolled = true;
+        it.rollValue = finalRoll;
+        it.quality = quality;
+        // Merchant: +20% sell value, but only if the item turned out real —
+        // no benefit on a fake, matches "take it to sell right away".
+        if(quality==='xin' && it.archetype==='merchant'){
+          it.sellValue = Math.round(it.sellValue*1.2);
+        }
+        state.rolling = false;
+        render();
+        checkSimAfterRoll(idx);
+      }
+    }
+    tick();
+  }
+
+  // Advances the sim script right after a roll completes (xanh -> show
+  // Sell/Stash hints; vang -> show Ditch/Scam hints). Both fire exactly
+  // once, gated by simStep, and leave the player free to actually act once
+  // the hint chain is dismissed.
+  function checkSimAfterRoll(idx){
+    if(state.currentStage!=='sim') return;
+    if(idx===0 && simStep==='xanh_unlocked'){
+      simStep = 'xanh_rolled';
+      runSimScript([
+        tutStep('💰 Sell Right Away', 'You can sell it now to lock in the cash...', 'Next →', ['#sellBtn']),
+        tutStep('🎒 Stash It Instead', 'Or you can Stash it and wait for a full set of 3, for 2x profit on all three.', 'Got It', ['#storeBtn'])
+      ], ()=>{ simStep='xanh_actionable'; });
+    } else if(idx===1 && simStep==='xanh_done'){
+      simStep = 'vang_rolled';
+      const info = scamSubText(state.items[1], state.items[1].sellValue);
+      const scamBody = info.collateral
+        ? `Or you can Scam to try and win the money back (the refund % drops for rarer items) — since you're holding collateral, it's 90% success, refunding ${info.pct}%: +${info.refund}k. The other 10% still costs you the collateral for nothing.`
+        : `Or you can Scam to try and win the money back, but you need an item in your Stash to use as collateral. Right now you have none, so scamming means a ${riskyScamOddsLabel(state.items[1])} gamble: win +${info.gain}k or lose -${info.loss}k.`;
+      runSimScript([
+        tutStep('🗑️ Ditch the Fake', 'You can just accept the loss...', 'Next →', ['#passBtn']),
+        tutStep('🎭 Scam', scamBody, 'Got It', ['#scamBtn', '#inventoryBar'])
+      ], ()=>{ simStep='vang_actionable'; });
+    }
+  }
+  // Advances the sim script right after xanh is resolved (either sold or
+  // stored) — always followed by the "here's your inventory bar" hint.
+  function checkSimAfterXanhResolved(idx){
+    if(state.currentStage!=='sim' || idx!==0 || simStep!=='xanh_actionable') return;
+    // Only mention decay if the player actually chose Stash this time — no
+    // point explaining a mechanic on the item they just sold outright.
+    const stored = state.items[0].choice === 'Stashed';
+    const body = stored
+      ? `The Stash — holds up to 2 slots, and you can sell Real items from it later. Note: every stage that passes without selling, a stashed item's value decays a bit (${Math.round(DECAY_RATE*100)}%/stage) — don't hold on too long if you're not sure you'll complete the set of 3.`
+      : 'The Stash — holds up to 2 slots, and you can sell Real items from it later.';
+    runSimScript([
+      tutStep('🎒 The Stash', body, 'Got It', ['#inventoryBar'])
+    ], ()=>{ simStep='xanh_done'; render(); });
+  }
+  // Gold's resolution (discard or either scam outcome) doesn't need its own
+  // popup — it just silently unlocks the Red tile back on the grid.
+  function checkSimAfterVangResolved(idx){
+    if(state.currentStage!=='sim' || idx!==1 || simStep!=='vang_actionable') return;
+    simStep = 'vang_done';
+  }
+  // If the player actually bribes their way to affording Red and resolves it
+  // (via any of Stash/Sell/Ditch/Scam), give them one last reflective nudge
+  // before they head back to the grid — the final "well done" summary popup
+  // still fires afterward via the normal grid-return check in
+  // renderStageScreen.
+  function checkSimAfterDoResolved(idx){
+    if(state.currentStage!=='sim' || idx!==2 || simStep!=='do_reached') return;
+    runSimScript([
+      tutStep('🤔 One Last Thought', "Once you've made your choice, head back to the room and think it over one last time before you leave this place...", 'Got It')
+    ]);
+  }
+
+  function discardFakeItem(idx){
+    const it = state.items[idx];
+    if(it.resolved) return;
+    const sellVal = it.sellValue;
+    state.loot -= sellVal;
+    state.discardCount += 1;
+    it.resolved = true;
+    it.choice = `Ditched (-${sellVal}k)`;
+    toast(`Ditched the fake: lost ${sellVal}k in value.`);
+    render();
+    checkSimAfterVangResolved(idx);
+    checkSimAfterDoResolved(idx);
+  }
+
+  function storeItem(idx){
+    const it = state.items[idx];
+    if(it.resolved) return;
+    // The Stash button is disabled in the UI whenever the Stash is already
+    // full (see renderItemCard) — this is just a defensive fallback, not a
+    // real path.
+    if(state.inventory.length >= MAX_SLOTS) return;
+    let sellVal = it.sellValue;
+    // Merchant's +20% only rewards selling immediately — stashing resets
+    // the item back to its base (un-boosted) price.
+    if(it.archetype==='merchant'){
+      const stageId = state.currentStage==='sim' ? 1 : state.currentStage;
+      sellVal = sellOf(it.color, stageId);
+      it.sellValue = sellVal;
+    }
+    if(it.color==='do' && state.currentStage!=='sim') state.doRealCount += 1;
+    state.inventory.push({color:it.color, shape:it.shape, sellValue:sellVal, originalSellValue:sellVal, decayStages:0, threshold:it.threshold, archetype:it.archetype});
+    it.resolved = true;
+    it.choice = 'Stashed';
+    toast(`Stashed ${it.name}.`);
+    render();
+    checkSimAfterXanhResolved(idx);
+    checkSimAfterDoResolved(idx);
+  }
+
+  function sellItem(idx){
+    const it = state.items[idx];
+    if(it.resolved) return;
+    const sellVal = it.sellValue;
+    if(it.color==='do' && state.currentStage!=='sim') state.doRealCount += 1;
+    state.loot += sellVal;
+    it.resolved = true;
+    it.choice = `Sold (+${sellVal}k)`;
+    toast(`Sold ${it.name}: +${sellVal}k profit!`);
+    render();
+    checkSimAfterXanhResolved(idx);
+    checkSimAfterDoResolved(idx);
+  }
+
+  function sellAllThree(idx){
+    const it = state.items[idx];
+    if(it.resolved) return;
+    const sellVal = it.sellValue;
+    // Defensive check: the button shouldn't be clickable unless the Stash
+    // already has 2 matching items, but re-verify here too (e.g. inventory
+    // sold from the bar out from under a stale card) rather than trusting
+    // the UI — never pay a 3-piece bonus without actually removing 2
+    // matches.
+    const matchCount = state.inventory.filter(x=>x.color===it.color).length;
+    if(matchCount<2){ sellItem(idx); return; }
+    const removedItems = [];
+    for(let i=state.inventory.length-1; i>=0 && removedItems.length<2; i--){
+      if(state.inventory[i].color===it.color){
+        removedItems.push(state.inventory[i]);
+        state.inventory.splice(i,1);
+      }
+    }
+    const collectorCount = removedItems.filter(x=>x.archetype==='collector').length + (it.archetype==='collector'?1:0);
+    const mult = collectorMultiplier(collectorCount);
+    const avgVal = (removedItems[0].sellValue + removedItems[1].sellValue + sellVal) / 3;
+    const bonus = Math.round(mult*avgVal);
+    const anyDecayed = removedItems.some(x=>x.decayStages>0);
+    if(it.color==='do' && state.currentStage!=='sim') state.doRealCount += 3;
+    state.loot += bonus;
+    state.comboCount += 1;
+    it.resolved = true;
+    it.choice = `Sold Set of 3 (+${bonus}k, x${mult.toFixed(2)})`;
+    toast(anyDecayed
+      ? `Full set of 3 ${COLORS[it.color].name}! Sold together at x${mult.toFixed(2)}: +${bonus}k (some stashed items had decayed).`
+      : `Full set of 3 ${COLORS[it.color].name}! Sold together at x${mult.toFixed(2)}: +${bonus}k!`, 3000);
+    render();
+    checkSimAfterXanhResolved(idx);
+    checkSimAfterDoResolved(idx);
+  }
+
+  // ----------------------------------------------------- inventory-full swap
+  function openInvFullModal(idx){
+    const it = state.items[idx];
+    const sellVal = it.sellValue;
+    pendingInvFullItem = {idx, color:it.color, shape:it.shape, sellValue:sellVal, name:it.name, threshold:it.threshold};
+    const box = document.getElementById('invFullOptions');
+    box.innerHTML = '';
+    state.inventory.forEach((invIt,i)=>{
+      const opt = document.createElement('div');
+      opt.className = 'swap-option';
+      opt.innerHTML = `
+        <div class="swap-option-icon" style="background:${SHADES[invIt.color].base}22;border:1px solid ${SHADES[invIt.color].base};">${itemSVG(invIt.color, invIt.shape)}</div>
+        <div class="swap-option-text">Swap in <b>${it.name}</b> — give up the ${COLORS[invIt.color].name} (${invIt.sellValue}k) you're holding</div>
+      `;
+      opt.addEventListener('click', ()=>resolveInvFullSwap(i));
+      box.appendChild(opt);
+    });
+    const keepOpt = document.createElement('div');
+    keepOpt.className = 'swap-option';
+    keepOpt.innerHTML = `
+      <div class="swap-option-icon" style="background:var(--card-hi);border:1px solid var(--stroke);">💰</div>
+      <div class="swap-option-text">Keep the Stash as-is, sell the new <b>${it.name}</b> outright (+${sellVal}k)</div>
+    `;
+    keepOpt.addEventListener('click', ()=>resolveInvFullSwap('new'));
+    box.appendChild(keepOpt);
+    document.getElementById('invFullOverlay').style.display = 'flex';
+  }
+  function resolveInvFullSwap(evictIndex){
+    document.getElementById('invFullOverlay').style.display = 'none';
+    const pending = pendingInvFullItem;
+    pendingInvFullItem = null;
+    if(!pending) return;
+    const it = state.items[pending.idx];
+    if(pending.color==='do' && state.currentStage!=='sim') state.doRealCount += 1;
+    if(evictIndex==='new'){
+      state.loot += pending.sellValue;
+      it.resolved = true;
+      it.choice = `Sold (+${pending.sellValue}k)`;
+      toast(`Sold ${pending.name}: +${pending.sellValue}k profit!`);
+    } else {
+      const evicted = state.inventory[evictIndex];
+      state.inventory.splice(evictIndex,1,{color:pending.color, shape:pending.shape, sellValue:pending.sellValue, threshold:pending.threshold});
+      it.resolved = true;
+      it.choice = `Stashed (swapped out ${COLORS[evicted.color].name})`;
+      toast(`Swapped ${COLORS[evicted.color].name} for ${pending.name}.`);
+    }
+    render();
+    checkSimAfterXanhResolved(pending.idx);
+  }
+
+  // ------------------------------------------------------ sell from stash
+  function requestSellFromInventory(i){
+    pendingSellInvIndex = i;
+    const item = state.inventory[i];
+    const remainPct = item.originalSellValue ? Math.round(item.sellValue/item.originalSellValue*100) : 100;
+    const decayNote = item.decayStages>0 ? ` (decayed to ${remainPct}% of its original ${item.originalSellValue}k)` : '';
+    document.getElementById('sellInvMsg').textContent =
+      `Sell this ${COLORS[item.color].name} at its current price: ${item.sellValue}k${decayNote}?`;
+    document.getElementById('sellInvOverlay').style.display = 'flex';
+  }
+
+  // ------------------------------------------------------------------ scam
+  function scamItem(idx){
+    const it = state.items[idx];
+    if(it.resolved) return;
+    if(hasCollateral()) performScamWithCollateral(idx);
+    else requestRiskyScam(idx);
+  }
+  function showScamSuspense(callback){
+    const overlay = document.getElementById('scamResultOverlay');
+    const box = document.getElementById('scamResultBox');
+    box.className = 'modal-box scam-result-box suspense';
+    document.getElementById('scamResultEmoji').textContent = '🎲';
+    document.getElementById('scamResultTitle').textContent = 'Shuffling the deck...';
+    document.getElementById('scamResultAmount').textContent = '';
+    document.getElementById('scamResultSub').textContent = '';
+    document.getElementById('scamResultContinue').style.display = 'none';
+    overlay.style.display = 'flex';
+    setTimeout(callback, 900);
+  }
+  function revealScamResult(idx, success, amountText, subMsg){
+    const overlay = document.getElementById('scamResultOverlay');
+    const box = document.getElementById('scamResultBox');
+    box.className = 'modal-box scam-result-box ' + (success ? 'success' : 'fail');
+    document.getElementById('scamResultEmoji').textContent = success ? '🎉' : '💀';
+    document.getElementById('scamResultTitle').textContent = success ? 'SCAM SUCCESSFUL!' : 'SCAM BUSTED!';
+    document.getElementById('scamResultAmount').textContent = amountText;
+    document.getElementById('scamResultSub').textContent = subMsg || '';
+    document.getElementById('scamResultContinue').style.display = 'block';
+    overlay.style.display = 'flex';
+    document.getElementById('scamResultContinue').onclick = ()=>{
+      overlay.style.display = 'none';
+      render();
+      checkSimAfterVangResolved(idx);
+      checkSimAfterDoResolved(idx);
+    };
+  }
+  function performScamWithCollateral(idx){
+    const it = state.items[idx];
+    const sellVal = it.sellValue;
+    showScamSuspense(()=>{
+      const refund = Math.round(scamRefundPct(it)*sellVal);
+      state.scamCount += 1;
+      state.collateralScamCount += 1;
+      // Collateral is handed over as part of the attempt either way — it's
+      // only returned if the scam actually goes through unnoticed.
+      const candidates = [];
+      state.inventory.forEach((inv,i)=>{ if(inv.color==='xanh'||inv.color==='vang') candidates.push(i); });
+      const removeIdx = candidates[Math.floor(Math.random()*candidates.length)];
+      const removed = state.inventory[removeIdx];
+      state.inventory.splice(removeIdx,1);
+      const success = Math.random() < COLLATERAL_SCAM_SUCCESS_PCT;
+      it.resolved = true;
+      if(success){
+        state.loot += refund;
+        it.choice = `Scam succeeded (+${refund}k, lost ${COLORS[removed.color].name})`;
+        revealScamResult(idx, true, `+${refund}k`, `Lost 1 ${COLORS[removed.color].name} collateral treasure from your Stash.`);
+      } else {
+        it.choice = `Scam busted (lost ${COLORS[removed.color].name}, no refund)`;
+        revealScamResult(idx, false, `+0k`, `Caught red-handed! Lost 1 ${COLORS[removed.color].name} collateral treasure with nothing to show for it.`);
+      }
+    });
+  }
+  function requestRiskyScam(idx){
+    pendingScamIdx = idx;
+    const it = state.items[idx];
+    const sellVal = it.sellValue;
+    const gain = Math.round(riskyScamGainPct(it)*sellVal);
+    const loss = Math.round(riskyScamFailMult(it)*sellVal);
+    document.getElementById('scamRiskMsg').textContent =
+      `No Green/Gold treasure on hand to use as collateral — your success rate is only ${riskyScamOddsLabel(it)}. Success: +${gain}k. Failure: -${loss}k.`;
+    document.getElementById('scamRiskOverlay').style.display='flex';
+  }
+  function performScamRisky(idx){
+    const it = state.items[idx];
+    const sellVal = it.sellValue;
+    showScamSuspense(()=>{
+      state.scamCount += 1;
+      state.riskyScamCount += 1;
+      const success = Math.random() < 0.5;
+      if(success){
+        const gain = Math.round(riskyScamGainPct(it)*sellVal);
+        state.loot += gain;
+        state.riskyScamWinCount += 1;
+        it.resolved = true;
+        it.choice = `Risky Scam succeeded (+${gain}k)`;
+        revealScamResult(idx, true, `+${gain}k`, 'A reckless gamble... and it paid off!');
+      } else {
+        const loss = Math.round(riskyScamFailMult(it)*sellVal);
+        state.loot -= loss;
+        it.resolved = true;
+        it.choice = `Risky Scam failed (-${loss}k)`;
+        revealScamResult(idx, false, `-${loss}k`, 'Bad luck... you lost everything, principal and profit alike!');
+      }
+    });
+  }
+
+  // ---------------------------------------------------- exit / mission flow
+  // Shared by every "run is ending" path (finish stage 5, give up from the
+  // out-of-turns modal, give up from the world map) — Stash items never
+  // sold don't auto-convert to loot, so warn once instead of letting that
+  // value silently vanish.
+  let pendingEndGameCall = null;
+  function proceedToEndGame(loot, outcome){
+    if(state.inventory.length>0){
+      const totalVal = state.inventory.reduce((s,it)=>s+it.sellValue,0);
+      pendingEndGameCall = ()=>{ state.endOutcome = outcome; showEndGame(loot, outcome); };
+      document.getElementById('khoWarnMsg').textContent =
+        `You still have ${state.inventory.length} item(s) in your Stash (~${totalVal}k) unsold — if you leave now, that value is lost completely and won't count toward your loot.`;
+      document.getElementById('khoWarnOverlay').style.display = 'flex';
+      return;
+    }
+    state.endOutcome = outcome;
+    showEndGame(loot, outcome);
+  }
+  function exitStage(){
+    navToken++;
+    const lootEarned = state.loot - state.stageStartLoot;
+    state.lastStageResult = {stageId: state.currentStage, lootEarned, turnsLeft: state.turns};
+    state.viewIndex = null;
+    if(state.currentStage>=5){
+      proceedToEndGame(state.loot, 'escaped');
+      return;
+    }
+    state.screen = 'summary';
+    render();
+  }
+  function renderSummaryScreen(){
+    const r = state.lastStageResult;
+    if(!r) return;
+    const stage = STAGES[r.stageId-1];
+    document.getElementById('summaryStageName').textContent = stage.name;
+    const lootEl = document.getElementById('summaryLoot');
+    lootEl.textContent = `Loot ${r.lootEarned>=0?'+':''}${r.lootEarned}k`;
+    lootEl.className = 'mission-loot ' + (r.lootEarned>=0 ? 'pos':'neg');
+    const counts = {xanh:0,vang:0,do:0};
+    state.inventory.forEach(it=>counts[it.color]++);
+    document.getElementById('summaryInventory').textContent =
+      `Stash: ${counts.xanh} Green · ${counts.vang} Gold · ${counts.do} Red`;
+    document.getElementById('summaryTurns').textContent = `Turns left: ${r.turnsLeft}`;
+    const read = getPlaystyleReadSoFar();
+    document.getElementById('summaryPlaystyle').textContent = `Current playstyle: ${read.emoji} ${read.name}`;
+  }
+  function continueToMap(){
+    navToken++;
+    // Decay whatever's still sitting unsold in the Stash — one stage just
+    // passed. Computed fresh from originalSellValue each time (not
+    // repeatedly multiplying the already-rounded current value) to avoid
+    // rounding drift over multiple stages.
+    state.inventory.forEach(it=>{
+      if(it.originalSellValue==null) return; // defensive, shouldn't happen
+      it.decayStages += 1;
+      it.sellValue = Math.round(it.originalSellValue * Math.pow(1-DECAY_RATE, it.decayStages));
+    });
+    state.screen = 'map';
+    state.currentStage = Math.min(5, state.currentStage+1);
+    render();
+  }
+
+  // -------------------------------------------------------------- turns UI
+  function showOutOfTurns(){
+    const cost = getBribeCost();
+    const canBribe = state.loot >= cost;
+    document.getElementById('outOfTurnsBribe').style.display = canBribe ? 'flex' : 'none';
+    document.getElementById('outOfTurnsMsg').textContent = canBribe
+      ? `You're out of Turns. Bribe the guard for -${cost}k to get 1 more Turn?`
+      : `You're out of Turns and don't have the ${cost}k needed to bribe the guard.`;
+    document.getElementById('outOfTurnsOverlay').style.display='flex';
+  }
+  function bribeGuard(fromModal){
+    const cost = getBribeCost();
+    if(state.loot < cost) return;
+    const btn = document.getElementById('bribeBtn');
+    btn.disabled = true;
+    btn.classList.add('bribing');
+    btn.innerHTML = '🤝 ...';
+    setTimeout(()=>{
+      state.loot -= cost;
+      state.turns += 1;
+      if(state.currentStage!=='sim') state.bribesUsed = (state.bribesUsed||0)+1;
+      btn.classList.remove('bribing');
+      render();
+      toast(`Bribed the guard: -${cost}k, +1 Turn.`);
+      if(fromModal){
+        document.getElementById('outOfTurnsOverlay').style.display='none';
+      }
+    }, 500);
+  }
+  function giveUpRun(){
+    document.getElementById('outOfTurnsOverlay').style.display='none';
+    navToken++;
+    proceedToEndGame(state.loot, 'gaveup');
+  }
+
+  // ---------------------------------------------------------------- endgame
+  // Lightweight, no-stars version of getPlayerTitle's read — meant to be
+  // shown mid-run (after each stage) so the player notices their own
+  // pattern as it forms, not just once at the very end. Deliberately uses
+  // different names than getPlayerTitle's end-game personas AND the
+  // Archetype names, so the 3 labeling systems don't blur together.
+  function getPlaystyleReadSoFar(){
+    const risky = state.riskyScamCount||0;
+    const collateral = state.collateralScamCount||0;
+    const combo = state.comboCount||0;
+    const discard = state.discardCount||0;
+    const doReal = state.doRealCount||0;
+    const totalSignal = risky+collateral+combo+discard;
+    if(totalSignal<2) return {emoji:'❓', name:'Style Still Forming'};
+    if(doReal>=2) return {emoji:'🔥', name:'Red Hunter'};
+    if(risky>=2 && collateral===0) return {emoji:'🎲', name:'The Reckless One'};
+    if(combo>=1 && collateral<=1 && risky<=1) return {emoji:'📦', name:'The Collector'};
+    if(collateral>=2 && risky===0 && discard===0) return {emoji:'🛡️', name:'The Careful One'};
+    if(discard>=3 && risky===0) return {emoji:'🧊', name:'The Defensive One'};
+    return {emoji:'⚔️', name:'The Balanced Thief'};
+  }
+  function getPlayerTitle(loot){
+    const stars = starsForLoot(loot, state.scamCount);
+    const risky = state.riskyScamCount||0;
+    const collateral = state.collateralScamCount||0;
+    const combo = state.comboCount||0;
+    const discard = state.discardCount||0;
+
+    if(stars===0){
+      if(risky>=3) return {emoji:'💀', name:'The Daredevil', desc:'Bet it all on one reckless, uncollateralized scam after another... and walked away with nothing.'};
+      if(discard>=5) return {emoji:'🧹', name:'The Overly Cautious', desc:'Ditched far too many treasures to stay safe, and still ran out of capital in the end.'};
+      return {emoji:'😅', name:'The Unlucky Rookie', desc:"A rocky start, to say the least. Learn from it and give it another go!"};
+    }
+    const doReal = state.doRealCount||0;
+    if(stars===3){
+      // Never scammed at all (always Ditch on a fake) — the most distinctive
+      // 3★ path now that it has its own lower bar, so it takes priority
+      // over every other persona check.
+      if((state.scamCount||0)===0) return {emoji:'🕊️', name:'The Honest Thief', desc:"Never scammed a single mark the whole run, and still walked away with enough loot for 3 stars, the honorable way."};
+      // A clean RISKY-scam record doesn't mean a cautious run — repeatedly
+      // taking Red (12.5-25% real odds) and having most of them land real is
+      // a run carried by luck, not prudence. Check this BEFORE "The Prudent
+      // Master" so it can't masquerade as a careful playstyle.
+      if(doReal>=3) return {emoji:'🍀', name:'The Red-Handed Gambler', desc:'Went straight for Red again and again, terrible odds be damned — and the luck never ran out.'};
+      if(risky===0 && discard===0) return {emoji:'🛡️', name:'The Prudent Master', desc:'Escaped with an enormous haul without ever taking a reckless gamble or bailing partway through.'};
+      if(risky>=3) return {emoji:'🎰', name:'The Legendary Gambler', desc:'Ran uncollateralized scams over and over and still walked away with a mountain of loot.'};
+      if(combo>=3) return {emoji:'💎', name:'The Set-Collecting Master', desc:'Squeezed every drop out of the 3-piece combo bonus to maximize the loot carried out.'};
+      if(collateral>=5) return {emoji:'🎭', name:'The Con Artist', desc:'A master of collateral-backed scams, calculating the risk on every single job.'};
+      return {emoji:'👑', name:'The Legendary Thief', desc:'Completed all 5 heists in full with a truly top-tier haul.'};
+    }
+    if(stars===2){
+      if(doReal>=2) return {emoji:'🍀', name:'The Red Player', desc:'Went straight after the risky Red pieces, and luck smiled at just the right moment.'};
+      if(risky>=2) return {emoji:'🎲', name:'The Calculated Risk-Taker', desc:'Took on moderate risk to bring home a bigger haul.'};
+      if(discard>=3) return {emoji:'🧊', name:'The Safe Player', desc:'Always chose certainty over a gamble.'};
+      return {emoji:'⚔️', name:'The Seasoned Thief', desc:'A steady, solid run with a respectable haul.'};
+    }
+    if(risky>=2) return {emoji:'🃏', name:'The High-Stakes Gambler', desc:'Survived a string of risky bets to make it out alive.'};
+    return {emoji:'🗝️', name:'The Apprentice Thief', desc:"Made it through all 5 heists, but there's still plenty to learn."};
+  }
+  function showEndGame(loot, outcome){
+    const stars = starsForLoot(loot, state.scamCount);
+    const title = getPlayerTitle(loot);
+    const isTrueLoss = outcome==='gaveup' && loot < 0;
+    document.getElementById('endGameTitle').textContent = outcome==='escaped'
+      ? '🏆 Escape Complete!'
+      : (isTrueLoss ? '💀 Retreated Empty-Handed' : '🏁 Retreated — Kept Every Bit of Loot!');
+    document.getElementById('endGameStars').textContent = '⭐'.repeat(stars) + '☆'.repeat(3-stars);
+    document.getElementById('endGameBadge').textContent = `${title.emoji} ${title.name}`;
+    document.getElementById('endGameBadgeDesc').textContent = title.desc;
+    document.getElementById('endGameLoot').textContent = `${loot}k`;
+    const msgs = {
+      3:'Outstanding! You walked away with an enormous haul.',
+      2:"Solid work! Try optimizing your 3-piece combos and timing your Scams better to bring home even more next time.",
+      1:'Job done! Try saving up Turns for the Red items in the final stage to really break through.',
+      0:"You took a loss... try a safer strategy next time!"
+    };
+    let finalMsg;
+    if(outcome==='escaped') finalMsg = msgs[stars];
+    else if(isTrueLoss) finalMsg = "No worries, try a different strategy next time!";
+    else finalMsg = `You chose to call it quits early — walking away with ${loot}k in loot.`;
+    document.getElementById('endGameMsg').textContent = finalMsg;
+    document.getElementById('endGameStatCombo').textContent = `3-Piece Combos: ${state.comboCount||0}`;
+    document.getElementById('endGameStatScam').textContent = `Scams: ${state.scamCount||0} (risky: ${state.riskyScamCount||0})`;
+    render();
+    document.getElementById('endGameOverlay').style.display='flex';
+  }
+
+  // ------------------------------------------------------------- inventory
+  function renderInventory(){
+    document.getElementById('invCount').textContent = state.inventory.length;
+    const box = document.getElementById('invSlots');
+    box.innerHTML='';
+    for(let i=0;i<MAX_SLOTS;i++){
+      const slot = document.createElement('div');
+      const item = state.inventory[i];
+      if(item){
+        const c = SHADES[item.color];
+        slot.className = 'inv-slot filled';
+        slot.style.borderColor = c.base;
+        slot.style.background = c.base+'22';
+        const tierTxt = item.threshold!=null ? tierLabel(item.threshold) : '';
+        const arch = item.archetype ? ARCHETYPE_BY_ID[item.archetype] : null;
+        // Radial "fan" showing remaining value% — full brass circle when
+        // fresh, shrinks (and the rest dims) as stage-decay eats into it.
+        // Only drawn once something has actually decayed, so a freshly
+        // stored item stays visually clean.
+        const remainPct = item.originalSellValue ? Math.round(item.sellValue/item.originalSellValue*100) : 100;
+        const decayRing = (item.decayStages>0)
+          ? `<div class="inv-slot-decay-ring" style="background:conic-gradient(var(--brass) ${remainPct}%, rgba(0,0,0,.55) ${remainPct}% 100%);"></div>`
+          : '';
+        slot.innerHTML = decayRing + itemSVG(item.color, item.shape) + (tierTxt ? `<span class="inv-slot-tier">${tierTxt}</span>` : '');
+        // Hover shows the Archetype, current price (already reflects any
+        // decay), and remaining% if it's decayed at all.
+        const decayTxt = item.decayStages>0 ? ` · ${remainPct}% value left (${item.decayStages} stage(s) passed)` : '';
+        slot.title = `${arch ? `${arch.icon} ${arch.name} · ` : ''}Sell at current price: ${item.sellValue}k${tierTxt ? ` · Real odds: ${tierTxt}` : ''}${decayTxt}`;
+        slot.onclick = ()=>requestSellFromInventory(i);
+      } else {
+        slot.className='inv-slot';
+        slot.textContent='·';
+      }
+      box.appendChild(slot);
+    }
+  }
+
+  // ------------------------------------------------------------ event wiring
+  document.getElementById('simEnterBtn').onclick = enterSim;
+  document.getElementById('simSkipBtn').onclick = skipSim;
+
+  document.getElementById('arrowLeft').onclick = ()=>{
+    if(document.getElementById('arrowLeft').disabled) return;
+    navToken++;
+    const n = state.items.length;
+    state.viewIndex = (state.viewIndex + n - 1) % n;
+    render();
+  };
+  document.getElementById('arrowRight').onclick = ()=>{
+    if(document.getElementById('arrowRight').disabled) return;
+    navToken++;
+    const n = state.items.length;
+    state.viewIndex = (state.viewIndex + 1) % n;
+    render();
+  };
+  document.getElementById('backBtn').onclick = ()=>{
+    if(document.getElementById('backBtn').disabled) return;
+    navToken++;
+    state.viewIndex = null;
+    render();
+  };
+  document.getElementById('exitStageBtn').onclick = exitStage;
+  document.getElementById('summaryContinueBtn').onclick = continueToMap;
+  document.getElementById('giveUpMapBtn').onclick = ()=>{ navToken++; proceedToEndGame(state.loot,'gaveup'); };
+
+  document.getElementById('bribeBtn').onclick = ()=>bribeGuard(false);
+  document.getElementById('bribeBtn').addEventListener('mouseenter', showBribeTooltip);
+  document.getElementById('bribeBtn').addEventListener('mousemove', showBribeTooltip);
+  document.getElementById('bribeBtn').addEventListener('mouseleave', hideBribeTooltip);
+  document.getElementById('outOfTurnsBribe').onclick = ()=>bribeGuard(true);
+  document.getElementById('outOfTurnsExit').onclick = giveUpRun;
+
+  document.getElementById('scamRiskCancel').onclick = ()=>{
+    document.getElementById('scamRiskOverlay').style.display='none';
+    pendingScamIdx = null;
+  };
+  document.getElementById('scamRiskConfirm').onclick = ()=>{
+    document.getElementById('scamRiskOverlay').style.display='none';
+    if(pendingScamIdx!==null){
+      performScamRisky(pendingScamIdx);
+      pendingScamIdx = null;
+    }
+  };
+
+  document.getElementById('khoWarnBack').onclick = ()=>{
+    document.getElementById('khoWarnOverlay').style.display='none';
+    render(); // stay on the grid — inventory bar is right there to sell from
+  };
+  document.getElementById('khoWarnProceed').onclick = ()=>{
+    document.getElementById('khoWarnOverlay').style.display='none';
+    if(pendingEndGameCall){ pendingEndGameCall(); pendingEndGameCall = null; }
+  };
+  document.getElementById('sellInvCancel').onclick = ()=>{
+    document.getElementById('sellInvOverlay').style.display='none';
+    pendingSellInvIndex = null;
+  };
+  document.getElementById('sellInvOk').onclick = ()=>{
+    if(pendingSellInvIndex!==null){
+      const item = state.inventory[pendingSellInvIndex];
+      state.loot += item.sellValue;
+      state.inventory.splice(pendingSellInvIndex,1);
+      toast(`Sold ${COLORS[item.color].name}: +${item.sellValue}k profit!`);
+    }
+    document.getElementById('sellInvOverlay').style.display='none';
+    pendingSellInvIndex = null;
+    render();
+  };
+
+  document.getElementById('helpBtn').onclick = ()=>{ document.getElementById('helpOverlay').style.display='flex'; };
+  document.getElementById('helpCloseBtn').onclick = ()=>{ document.getElementById('helpOverlay').style.display='none'; };
+
+  document.getElementById('endGameContinue').onclick = ()=>{
+    navToken++;
+    document.getElementById('endGameOverlay').style.display='none';
+    startRealGame();
+  };
+
+  document.getElementById('resetBtn').onclick = ()=>{
+    navToken++;
+    startRealGame();
+    toast('Started a new run.');
+  };
+
+  // ------------------------------------------------------------------ boot
+  state = freshState();
+  render();
+  runSimScript([
+    tutStep('👋 Welcome, Rookie Thief!',
+      'Welcome to the trade, rookie — prove yourself through the trials ahead...<br><br><span style="color:var(--brass);font-weight:700;">Tap into the practice round to begin the tutorial.</span>',
+      'Begin')
+  ], ()=>{ /* welcome dismissed — intro screen's own buttons take over from here */ });
+})();
+</script>
+</body>
+</html>

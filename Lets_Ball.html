@@ -1,0 +1,2376 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1">
+<title>Let's Ball</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{background:#0d1117;display:flex;justify-content:center;align-items:center;min-height:100vh;font-family:'Segoe UI',system-ui,sans-serif;overflow:hidden;touch-action:none;}
+#phone{width:390px;height:840px;background:#0f172a;border-radius:40px;border:3px solid #1e293b;box-shadow:0 0 0 6px #0a0e18,0 40px 80px rgba(0,0,0,.8);display:flex;flex-direction:column;overflow:hidden;position:relative;}
+#topbar{background:#0f172a;padding:14px 14px 10px;display:flex;align-items:center;gap:8px;flex-shrink:0;border-bottom:1px solid #1e293b;z-index:10;}
+#brand{font-size:18px;font-weight:900;letter-spacing:.3px;background:linear-gradient(90deg,#fbbf24,#f43f5e);-webkit-background-clip:text;background-clip:text;color:transparent;display:flex;align-items:center;gap:6px;}
+#lvlnav{margin-left:auto;display:flex;align-items:center;gap:4px;background:#0a0e18;border-radius:10px;padding:3px 4px;}
+.navb{width:26px;height:26px;border:none;border-radius:7px;background:#1e293b;color:#a78bfa;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.navb:active{background:#7c3aed;color:#fff;}
+.navb:disabled{opacity:.3;cursor:default;}
+#b-mute{margin-left:10px;width:28px;height:28px;border-radius:8px;background:#0a0e18;font-size:14px;}
+#lvllabel{font-size:11px;font-weight:800;color:#cbd5e1;min-width:88px;text-align:center;}
+#lvllabel small{display:block;color:#64748b;font-size:9px;font-weight:600;}
+#kho{background:#1e293b;padding:7px 10px;flex-shrink:0;border-bottom:1px solid #0f172a;}
+#kho-head{font-size:9px;color:#64748b;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:5px;display:flex;align-items:center;gap:6px;}
+#kho-head b{color:#a78bfa;}
+#kho-items{display:flex;gap:6px;overflow-x:auto;min-height:48px;align-items:center;}
+.chip{display:flex;flex-direction:column;align-items:center;gap:2px;padding:5px 9px;border-radius:9px;border:1.5px solid #334155;background:#0f172a;cursor:grab;flex-shrink:0;}
+.chip canvas{pointer-events:none;}
+.chip .nm{font-size:8.5px;color:#94a3b8;font-weight:600;white-space:nowrap;}
+.kho-empty{font-size:10.5px;color:#475569;font-style:italic;padding:8px 4px;}
+#canvas-wrap{flex:1;position:relative;overflow:hidden;display:flex;align-items:center;justify-content:center;background:#0a1422;}
+#game-canvas{display:block;max-width:100%;max-height:100%;touch-action:none;}
+#sel-panel{position:absolute;bottom:8px;left:50%;transform:translateX(-50%);background:rgba(30,41,59,.97);border:1px solid #334155;border-radius:12px;padding:6px 9px;display:none;align-items:center;gap:6px;z-index:20;}
+.sel-label{font-size:10.5px;color:#cbd5e1;font-weight:700;}
+.mini{height:30px;min-width:34px;padding:0 8px;border-radius:8px;border:1px solid #334155;background:#0f172a;color:#a78bfa;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;}
+.mini:active{background:#7c3aed;color:#fff;}
+.mini.danger{border-color:#7f1d1d;background:#450a0a;color:#f87171;}
+#overlay{position:absolute;inset:0;display:none;flex-direction:column;align-items:center;justify-content:center;gap:16px;background:rgba(7,11,20,.78);z-index:50;text-align:center;padding:24px;}
+#overlay.show{display:flex;}
+#ov-emoji{font-size:64px;line-height:1;animation:pop .4s cubic-bezier(.18,1.4,.4,1);}
+@keyframes pop{0%{transform:scale(0);}100%{transform:scale(1);}}
+#ov-text{font-size:24px;font-weight:900;color:#fff;}
+#ov-sub{font-size:13px;color:#94a3b8;font-weight:600;margin-top:-6px;}
+.ovbtn{padding:12px 26px;border-radius:12px;border:none;font-size:15px;font-weight:800;cursor:pointer;}
+.ovbtn.go{background:#7c3aed;color:#fff;}
+.ovbtn.gray{background:#1e293b;color:#cbd5e1;border:1px solid #334155;}
+#bottombar{background:#0f172a;padding:10px 12px 16px;display:flex;gap:8px;flex-shrink:0;border-top:1px solid #1e293b;}
+.bbtn{padding:13px;border-radius:13px;border:none;font-size:15px;font-weight:800;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:6px;}
+#b-play{flex:1;background:#059669;color:#fff;}
+#b-play.stop{background:#dc2626;}
+#b-reset{background:#0f172a;color:#94a3b8;border:1.5px solid #334155;width:54px;}
+#toast{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:rgba(15,23,42,.95);border:1px solid #334155;border-radius:10px;padding:7px 16px;font-size:12px;font-weight:800;display:none;z-index:40;}
+#ghost{position:fixed;pointer-events:none;z-index:9999;display:none;opacity:.85;}
+/* lose / win full-screen flash */
+#flash{position:absolute;inset:0;pointer-events:none;z-index:48;opacity:0;}
+#flash.lose{background:radial-gradient(circle,rgba(220,38,38,0) 35%,rgba(220,38,38,.6) 100%);animation:flashFx .55s ease-out;}
+#flash.win{background:radial-gradient(circle,rgba(251,191,36,0) 38%,rgba(251,191,36,.5) 100%);animation:flashFx .6s ease-out;}
+@keyframes flashFx{0%{opacity:0;}15%{opacity:1;}100%{opacity:0;}}
+/* ---- Tutor 1: animated drag hand ---- */
+#hand{position:absolute;left:46px;top:78px;z-index:46;pointer-events:none;display:none;}
+#hand.show{display:block;animation:handDrag 2.9s ease-in-out infinite;}
+#hand svg{filter:drop-shadow(0 3px 5px rgba(0,0,0,.55));display:block;}
+@keyframes handDrag{
+  0%{transform:translate(0,0) scale(1);}
+  7%{transform:translate(0,0) scale(.8);}
+  16%{transform:translate(4px,12px) scale(.8);}
+  58%{transform:translate(40px,250px) scale(.8);}
+  70%{transform:translate(40px,250px) scale(1.02);}
+  86%{transform:translate(40px,250px) scale(1);}
+  100%{transform:translate(0,0) scale(1);}
+}
+/* ---- Tutor 2: one-time rotate-box pulse ---- */
+@keyframes pulseHint{0%,100%{box-shadow:0 0 0 0 rgba(167,139,250,0);}50%{box-shadow:0 0 0 8px rgba(167,139,250,.55);}}
+.pulse-hint{animation:pulseHint .7s ease-in-out 3;border-color:#a78bfa!important;}
+/* ---- Tutor 2: finger pointing down at the rotate box ---- */
+#point-hand{position:absolute;left:50%;bottom:54px;z-index:47;pointer-events:none;display:none;transform:translateX(-50%);}
+#point-hand.show{display:block;animation:pointBob .7s ease-in-out infinite;}
+#point-hand svg{display:block;transform:rotate(180deg);filter:drop-shadow(0 3px 5px rgba(0,0,0,.55));}
+@keyframes pointBob{0%,100%{transform:translateX(-50%) translateY(-9px);}50%{transform:translateX(-50%) translateY(2px);}}
+</style>
+</head>
+<body>
+<div id="phone">
+  <div id="topbar">
+    <div id="brand">&#9917; Let's Ball</div>
+    <button class="navb" id="b-mute" onclick="toggleMute()" title="Toggle sound">&#128266;</button>
+    <div id="lvlnav">
+      <button class="navb" id="nav-prev" onclick="gotoLevel(curLevel-1)">&lsaquo;</button>
+      <div id="lvllabel">Level 1/14<small>Tutorial 1</small></div>
+      <button class="navb" id="nav-next" onclick="gotoLevel(curLevel+1)">&rsaquo;</button>
+    </div>
+  </div>
+  <div id="kho">
+    <div id="kho-head">&#127890; Inventory &mdash; <b>drag items onto the map</b> to build the path</div>
+    <div id="kho-items"></div>
+  </div>
+  <div id="canvas-wrap">
+    <canvas id="game-canvas"></canvas>
+    <div id="flash"></div>
+    <div id="sel-panel"></div>
+    <div id="point-hand">
+      <svg viewBox="0 0 24 24" width="46" height="46" fill="#ffe8c2" stroke="#5b21b6" stroke-width="1" stroke-linejoin="round">
+        <path d="M9 11.24V7.5a2.5 2.5 0 0 1 5 0v3.74c1.21-.81 2-2.18 2-3.74a4 4 0 1 0-8 0c0 1.56.79 2.93 2 3.74zM18.84 15.87l-4.54-2.26c-.17-.07-.35-.11-.54-.11H13v-6a1.5 1.5 0 0 0-3 0v10.74l-3.43-.72a1 1 0 0 0-1.01 1.64l3.6 3.6c.37.37.88.58 1.41.58h6.41c.93 0 1.72-.64 1.94-1.55l.83-3.66a1.5 1.5 0 0 0-.92-1.7z"/>
+      </svg>
+    </div>
+    <div id="toast"></div>
+    <div id="overlay">
+      <div id="ov-emoji"></div>
+      <div id="ov-text"></div>
+      <div id="ov-sub"></div>
+      <div id="ov-actions" style="display:flex;gap:10px;"></div>
+    </div>
+  </div>
+  <div id="bottombar">
+    <button class="bbtn" id="b-reset" onclick="resetLayout()" title="Return all items to Inventory">&#8634;</button>
+    <button class="bbtn" id="b-play" onclick="togglePlay()">&#9654; Play</button>
+  </div>
+  <div id="hand">
+    <svg viewBox="0 0 24 24" width="40" height="40" fill="#ffe8c2" stroke="#5b21b6" stroke-width="1" stroke-linejoin="round">
+      <path d="M9 11.24V7.5a2.5 2.5 0 0 1 5 0v3.74c1.21-.81 2-2.18 2-3.74a4 4 0 1 0-8 0c0 1.56.79 2.93 2 3.74zM18.84 15.87l-4.54-2.26c-.17-.07-.35-.11-.54-.11H13v-6a1.5 1.5 0 0 0-3 0v10.74l-3.43-.72a1 1 0 0 0-1.01 1.64l3.6 3.6c.37.37.88.58 1.41.58h6.41c.93 0 1.72-.64 1.94-1.55l.83-3.66a1.5 1.5 0 0 0-.92-1.7z"/>
+    </svg>
+  </div>
+</div>
+<canvas id="ghost" width="64" height="40"></canvas>
+<script>
+/* =====================================================================
+ * Ball Drop — Physics Object Library  (ball_drop_lib.js)
+ * ---------------------------------------------------------------------
+ * Object-oriented physics library (ES6 classes) for the Ball Drop game.
+ * Each object is its own class, inheriting from Entity, with 3 behavior groups:
+ *   - update(world, dt) : update state / forces each frame
+ *   - collide(world)    : handle collisions with the ball / dominoes
+ *   - draw(ctx, t)      : draw to canvas
+ *
+ * Objects:
+ *   Ball               – the ball, falls under gravity
+ *   Fan                – fan, pushes in 1 of 4 directions within its wind zone
+ *   Platform           – fixed ground/platform
+ *   Domino             – stands still until start, then falls due to gravity /
+ *                        being hit by the ball / blown by a fan / a zero-gravity zone
+ *   DoorSwitch + Door  – switch & door of the same color (off=blocked, on=open)
+ *   Portal             – a pair of portals that teleport the ball & dominoes
+ *   GravityField       – a zone that changes gravity (stronger / zero-g)
+ *   GravitySwitch      – switch to toggle a GravityField of the same color
+ *   Magnet             – magnet that pulls the ball in any gravity zone
+ *
+ * Coordinate system: canvas (x right, y down). No DOM dependency — can
+ * run in Node for testing too.
+ * ===================================================================== */
+
+(function (root, factory) {
+  const lib = factory();
+  if (typeof module === 'object' && module.exports) module.exports = lib; // Node
+  root.BallDrop = lib;                                                    // Browser
+})(typeof self !== 'undefined' ? self : this, function () {
+'use strict';
+
+/* ============================ CONSTANTS ============================ */
+const CONST = {
+  GRAVITY:        820,   // px/s^2 base gravity
+  SUBSTEPS:       4,     // sub-steps per frame (collision stability)
+  FAN_FORCE:      1500,  // fan force
+  BALL_RADIUS:    11,
+  REST_DEFAULT:   0.2,   // default restitution (bounciness)
+  FRICTION:       0.997, // default tangential friction
+  DOMINO_W:       12,
+  DOMINO_H:       72,
+  DOMINO_CHAIN:   80,    // max distance for a domino to knock over the next one
+  PLATFORM_W:     140,
+  PLATFORM_H:     14,
+  CUP_W:          66,    // cup mouth width (goal)
+  CUP_H:          38,    // cup wall height
+};
+
+/* ============================ VEC2 ============================== */
+class Vec2 {
+  constructor(x = 0, y = 0) { this.x = x; this.y = y; }
+  set(x, y) { this.x = x; this.y = y; return this; }
+  clone() { return new Vec2(this.x, this.y); }
+  add(v) { this.x += v.x; this.y += v.y; return this; }
+  scale(s) { this.x *= s; this.y *= s; return this; }
+  len() { return Math.hypot(this.x, this.y); }
+}
+const dist = (ax, ay, bx, by) => Math.hypot(ax - bx, ay - by);
+const clamp = (v, a, b) => (v < a ? a : v > b ? b : v);
+// rotate vector (x,y) by angle a
+function rot(x, y, a) { const c = Math.cos(a), s = Math.sin(a); return { x: x * c - y * s, y: x * s + y * c }; }
+
+/* ====================== COLLISION HELPERS ====================== */
+// Convert a world point into the local coordinate space of a rect (centered at rect.x,rect.y, rotated by rect.angle)
+function toLocal(px, py, rect) {
+  const dx = px - rect.x, dy = py - rect.y, c = Math.cos(-rect.angle || 0), s = Math.sin(-rect.angle || 0);
+  return { x: dx * c - dy * s, y: dx * s + dy * c };
+}
+// circle–rect intersect: returns {wn (world normal), pen (penetration depth), face} or null
+function circleRect(cx, cy, r, rect) {
+  const hx = rect.w / 2, hy = rect.h / 2, l = toLocal(cx, cy, rect);
+  const qx = clamp(l.x, -hx, hx), qy = clamp(l.y, -hy, hy);
+  const dx = l.x - qx, dy = l.y - qy, dsq = dx * dx + dy * dy;
+  if (dsq > r * r) return null;
+  let d = Math.sqrt(dsq), nx, ny;
+  if (d > 1e-6) { nx = dx / d; ny = dy / d; }
+  else { const p = hx - Math.abs(l.x), q = hy - Math.abs(l.y);
+         if (p < q) { nx = l.x >= 0 ? 1 : -1; ny = 0; } else { nx = 0; ny = l.y >= 0 ? 1 : -1; } d = 0; }
+  const wn = rot(nx, ny, rect.angle || 0);
+  let face;
+  if (Math.abs(l.x) <= hx + 0.01) face = l.y < 0 ? 'top' : 'bottom';
+  else face = l.x < 0 ? 'left' : 'right';
+  return { wn, pen: r - d, face, local: l };
+}
+// Resolve a ball's collision (with vx,vy) against a static rect. Returns info or null.
+function resolveBallRect(ball, rect, rest = CONST.REST_DEFAULT, fric = CONST.FRICTION) {
+  const info = circleRect(ball.x, ball.y, ball.radius, rect);
+  if (!info) return null;
+  ball.x += info.wn.x * info.pen;
+  ball.y += info.wn.y * info.pen;
+  const vn = ball.vx * info.wn.x + ball.vy * info.wn.y;
+  if (vn < 0) {
+    ball.vx += -(1 + rest) * vn * info.wn.x;
+    ball.vy += -(1 + rest) * vn * info.wn.y;
+    const tx = -info.wn.y, ty = info.wn.x, vt = ball.vx * tx + ball.vy * ty, nvt = vt * fric;
+    ball.vx += (nvt - vt) * tx;
+    ball.vy += (nvt - vt) * ty;
+  }
+  return info;
+}
+// whether a point lies inside a (rotated) rect
+function pointInRect(px, py, rect) {
+  const l = toLocal(px, py, rect);
+  return Math.abs(l.x) <= rect.w / 2 && Math.abs(l.y) <= rect.h / 2;
+}
+
+/* ============================ ENTITY =========================== */
+let _uid = 0;
+class Entity {
+  constructor(opts = {}) {
+    this.id = ++_uid;
+    this.type = 'entity';
+    this.x = opts.x || 0;
+    this.y = opts.y || 0;
+    this.angle = opts.angle || 0;
+    this.color = opts.color || '#94a3b8';
+    this.dead = false;
+  }
+  update(world, dt) {}
+  collide(world, dt) {}
+  draw(ctx, t) {}
+  // default rect collider (override as needed)
+  rect() { return { x: this.x, y: this.y, angle: this.angle, w: 0, h: 0 }; }
+}
+
+/* ============================= BALL ============================ */
+// Ball: the primary falling object, subject to gravity. World integrates its motion.
+class Ball extends Entity {
+  constructor(opts = {}) {
+    super(opts);
+    this.type = 'ball';
+    this.vx = opts.vx || 0;
+    this.vy = opts.vy || 0;
+    this.radius = opts.radius || CONST.BALL_RADIUS;
+    this.color = opts.color || '#fbbf24';
+    this.mass = 1;            // affected by GravityField increase/decrease
+    this._portalCd = 0;       // cooldown to avoid repeated teleporting
+  }
+  draw(ctx) {
+    if (this.dead) return;
+    ctx.save();
+    ctx.beginPath(); ctx.arc(this.x, this.y, this.radius, 0, Math.PI * 2);
+    ctx.fillStyle = this.color; ctx.shadowColor = this.color; ctx.shadowBlur = 8; ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.beginPath(); ctx.arc(this.x - 3, this.y - 3, 3, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(255,255,255,.4)'; ctx.fill();
+    ctx.restore();
+  }
+}
+
+/* ============================ PLATFORM ========================= */
+// Fixed platform that supports the ball/dominoes.
+class Platform extends Entity {
+  constructor(opts = {}) {
+    super(opts);
+    this.type = 'platform';
+    this.w = opts.w || CONST.PLATFORM_W;
+    this.h = opts.h || CONST.PLATFORM_H;
+    this.rest = opts.rest != null ? opts.rest : 0.18;
+    this.color = opts.color || '#6d28d9';
+  }
+  rect() { return { x: this.x, y: this.y, angle: this.angle, w: this.w, h: this.h }; }
+  // A static collider — World calls resolve in solveStatics
+  isStatic() { return true; }
+  draw(ctx) {
+    const w = this.w, h = this.h;
+    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+    ctx.fillStyle = this.color;
+    ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h, 4); ctx.fill();
+    ctx.fillStyle = 'rgba(167,139,250,.2)';
+    ctx.beginPath(); ctx.roundRect(-w / 2, -h / 2, w, h / 2, [4, 4, 0, 0]); ctx.fill();
+    ctx.restore();
+  }
+}
+
+/* ============================== FAN =========================== */
+// Fixed fan, blows in 1 of 4 directions. angle determines blow direction (default: upward).
+// Blow direction = vector (0,-1) rotated by angle. Has a rectangular wind zone in front.
+class Fan extends Entity {
+  constructor(opts = {}) {
+    super(opts);
+    this.type = 'fan';
+    this.force = opts.force || CONST.FAN_FORCE;
+    this.zoneW = opts.zoneW || 66;
+    this.zoneL = opts.zoneL || 165;
+    this.bodyW = 34; this.bodyH = 18;
+    this.off = !!opts.off;
+    this.color = opts.color || '#047857';
+  }
+  // blow direction (unit vector)
+  blowDir() { return rot(0, -1, this.angle); }
+  // wind zone (world rect) placed in front of the fan
+  zone() {
+    const d = this.blowDir();
+    return { x: this.x + d.x * this.zoneL / 2, y: this.y + d.y * this.zoneL / 2,
+             angle: this.angle, w: this.zoneW, h: this.zoneL };
+  }
+  bodyRect() { return { x: this.x, y: this.y, angle: this.angle, w: this.bodyW, h: this.bodyH }; }
+  isStatic() { return true; }            // the fan body blocks the ball
+  rect() { return this.bodyRect(); }
+  // wind force at a point (ball/domino). Returns a force vector or null if outside the zone.
+  forceAt(px, py) {
+    if (this.off) return null;
+    if (!pointInRect(px, py, this.zone())) return null;
+    const d = this.blowDir();
+    return { x: d.x * this.force, y: d.y * this.force };
+  }
+  draw(ctx, t = 0) {
+    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+    ctx.fillStyle = this.off ? '#334155' : this.color;
+    ctx.beginPath(); ctx.roundRect(-17, -9, 34, 18, 5); ctx.fill();
+    ctx.fillStyle = this.off ? 'rgba(148,163,184,.4)' : 'rgba(110,231,183,.7)';
+    for (let i = 0; i < 3; i++) {
+      ctx.save();
+      ctx.rotate((i * Math.PI * 2 / 3) + (this.off ? 0 : (t / 100) % (Math.PI * 2)));
+      ctx.beginPath(); ctx.ellipse(13, 0, 11, 4, 0, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+    }
+    ctx.fillStyle = '#a7f3d0'; ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle'; ctx.fillText('↑', 0, -18);
+    ctx.strokeStyle = 'rgba(52,211,153,.12)'; ctx.lineWidth = 1; ctx.setLineDash([3, 5]);
+    ctx.beginPath(); ctx.roundRect(-this.zoneW / 2, -this.zoneL - 9, this.zoneW, this.zoneL, 4);
+    ctx.stroke(); ctx.setLineDash([]);
+    ctx.restore();
+  }
+}
+
+/* ============================ DOMINO ========================== */
+// Domino: stands still before start. After start, it can fall when:
+//   - hit by the ball, blown by a fan, inside a zero-gravity zone, or knocked by an adjacent domino.
+// States: 'standing' -> 'toppling' (rotating around its base) -> 'fallen' (lying down)
+//   or 'falling' (free fall, after going through a portal / leaving the edge of a support).
+class Domino extends Entity {
+  constructor(opts = {}) {
+    super(opts);
+    this.type = 'domino';
+    this.w = opts.w || CONST.DOMINO_W;
+    this.h = opts.h || CONST.DOMINO_H;
+    this.state = 'standing';
+    this.fallDir = 0;       // +1 right, -1 left
+    this.fallAngle = 0;     // 0..PI/2 while toppling
+    this.fallVel = 0;
+    this.vx = 0; this.vy = 0; // while 'falling' (free fall)
+    this.spin = 0;          // angular velocity during free fall
+    this.color = opts.color || '#92400e';
+    this._portalCd = 0;
+  }
+  // Current geometric center (for collision / portal). Base stands at (x,y), body points upward.
+  centerPoint() {
+    if (this.state === 'falling') return { x: this.x, y: this.y };
+    const a = this.angle + this.fallAngle * this.fallDir;
+    // center is h/2 from the base along the body
+    const up = rot(0, -this.h / 2, a);
+    return { x: this.x + up.x, y: this.y + up.y };
+  }
+  // current rect collider
+  rect() {
+    if (this.state === 'fallen') {
+      return { x: this.x + (this.fallDir * this.h / 2), y: this.y - this.w / 2,
+               angle: this.angle + Math.PI / 2 * this.fallDir, w: this.w, h: this.h };
+    }
+    if (this.state === 'falling') {
+      return { x: this.x, y: this.y, angle: this.angle, w: this.w, h: this.h };
+    }
+    const a = this.angle + this.fallAngle * this.fallDir;
+    const c = this.centerPoint();
+    return { x: c.x, y: c.y, angle: a, w: this.w, h: this.h };
+  }
+  // Start toppling in direction dir (+1/-1)
+  topple(dir) {
+    if (this.state !== 'standing') return;
+    this.state = 'toppling';
+    this.fallDir = dir >= 0 ? 1 : -1;
+    this.fallAngle = 0;
+    this.fallVel = 2.5;
+  }
+  update(world, dt) {
+    if (this.state === 'standing') {
+      // Inside a zero-gravity zone: loses balance, starts to topple.
+      const g = world.gravityAt(this.x, this.y - this.h / 2);
+      if (g.zero) this.topple(this.fallDir || 1);
+      return;
+    }
+    if (this.state === 'toppling') {
+      this.fallVel += 18 * Math.cos(this.fallAngle) * dt;
+      this.fallAngle += this.fallVel * dt;
+      if (this.fallAngle >= Math.PI / 2) {
+        this.fallAngle = Math.PI / 2; this.fallVel = 0; this.state = 'fallen';
+        world._dominoFell(this); // chain reaction + trigger switches
+      }
+      return;
+    }
+    if (this.state === 'falling') {
+      const g = world.gravityAt(this.x, this.y);
+      this.vy += g.y * dt; this.vx += g.x * dt;
+      this.x += this.vx * dt; this.y += this.vy * dt;
+      this.angle += this.spin * dt;
+      // stop once it hits the very bottom (simplified)
+      if (this.y > world.H + 100) this.dead = true;
+    }
+  }
+  // switch to free fall (leaving an edge / going through a portal)
+  toFalling(vx = 0, vy = 0) {
+    const c = this.centerPoint();
+    this.x = c.x; this.y = c.y;
+    this.angle = this.angle + this.fallAngle * this.fallDir;
+    this.state = 'falling';
+    this.vx = vx; this.vy = vy; this.spin = this.fallVel * this.fallDir;
+  }
+  draw(ctx) {
+    ctx.save();
+    if (this.state === 'falling') {
+      ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+      this._drawBody(ctx, true);
+    } else {
+      ctx.translate(this.x, this.y); ctx.rotate(this.angle + this.fallAngle * this.fallDir
+        + (this.state === 'fallen' ? Math.PI / 2 * this.fallDir : 0));
+      this._drawBody(ctx, false);
+    }
+    ctx.restore();
+  }
+  _drawBody(ctx, centered) {
+    const w = this.w, h = this.h;
+    const top = centered ? -h / 2 : -h; // falling draws around the center, others draw from the base up
+    ctx.fillStyle = this.color;
+    ctx.beginPath(); ctx.roundRect(-w / 2, top, w, h, 3); ctx.fill();
+    ctx.fillStyle = 'rgba(251,191,36,.2)';
+    ctx.beginPath(); ctx.roundRect(-w / 2, top, w / 2, h, [3, 0, 0, 3]); ctx.fill();
+    ctx.fillStyle = '#fbbf24';
+    [0.25, 0.5, 0.75].forEach(f => { ctx.beginPath(); ctx.arc(0, top + h * f, 2, 0, Math.PI * 2); ctx.fill(); });
+  }
+}
+
+/* ========================== DOOR / SWITCH ===================== */
+// Door: fixed. switch off -> has a collider (blocks). switch on -> no collider (open).
+class Door extends Entity {
+  constructor(opts = {}) {
+    super(opts);
+    this.type = 'door';
+    this.w = opts.w || 12;
+    this.h = opts.h || 70;
+    this.open = !!opts.open;          // open=true means passable (switch ON)
+    this.color = opts.color || '#dc2626';
+  }
+  rect() { return { x: this.x, y: this.y, angle: this.angle, w: this.w, h: this.h }; }
+  isStatic() { return !this.open; }   // only blocks when closed
+  draw(ctx) {
+    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+    if (this.open) {
+      ctx.globalAlpha = 0.22; ctx.fillStyle = this.color;
+      ctx.beginPath(); ctx.roundRect(-this.w / 2, -this.h / 2, this.w, this.h, 3); ctx.fill();
+      ctx.globalAlpha = 0.4; ctx.strokeStyle = this.color; ctx.lineWidth = 1.5; ctx.setLineDash([6, 5]);
+      ctx.beginPath(); ctx.roundRect(-this.w / 2, -this.h / 2, this.w, this.h, 3); ctx.stroke();
+      ctx.setLineDash([]); ctx.globalAlpha = 1;
+    } else {
+      ctx.fillStyle = this.color;
+      ctx.beginPath(); ctx.roundRect(-this.w / 2, -this.h / 2, this.w, this.h, 3); ctx.fill();
+    }
+    ctx.restore();
+  }
+}
+
+// DoorSwitch: fixed, same color as its door(s).
+//   - Ball touches: TOGGLE on<->off each time it touches (must leave and touch again to toggle again).
+//   - Domino falls onto it: TOGGLES only once (falling is a one-time event).
+class DoorSwitch extends Entity {
+  constructor(opts = {}) {
+    super(opts);
+    this.type = 'door-switch';
+    this.r = opts.r || 14;
+    this.on = !!opts.on;
+    this.color = opts.color || '#f59e0b';
+    this.targets = opts.targets || [];  // array of Doors (assigned via World.link or by matching color)
+    this._ballInside = false;           // prevents repeated toggling while the ball rests on the switch
+    this._dominoHit = false;            // domino can only trigger once
+  }
+  // called to flip the state
+  toggle(world) {
+    this.on = !this.on;
+    world.doorsOfColor(this.color).forEach(d => { d.open = this.on; });
+    this.targets.forEach(d => { d.open = this.on; });
+  }
+  collide(world) {
+    const b = world.ball;
+    if (b && !b.dead) {
+      const inside = dist(b.x, b.y, this.x, this.y) < this.r + b.radius;
+      if (inside && !this._ballInside) this.toggle(world); // new contact -> toggle
+      this._ballInside = inside;
+    }
+    // domino fell onto it
+    if (!this._dominoHit) {
+      for (const d of world.dominoes) {
+        if (d.state === 'fallen' || d.state === 'toppling') {
+          const c = d.centerPoint();
+          if (dist(c.x, c.y, this.x, this.y) < this.r + 18) { this.toggle(world); this._dominoHit = true; break; }
+        }
+      }
+    }
+  }
+  draw(ctx) {
+    ctx.save(); ctx.translate(this.x, this.y);
+    // off state still uses the switch's COLOR (matches doors of the same color), only differs in glow + brightness
+    ctx.fillStyle = this.color;
+    if (this.on) { ctx.shadowColor = this.color; ctx.shadowBlur = 14; }
+    ctx.beginPath(); ctx.roundRect(-12, -12, 24, 24, 5); ctx.fill();
+    ctx.shadowBlur = 0;
+    if (!this.on) { ctx.fillStyle = 'rgba(0,0,0,.42)'; ctx.beginPath(); ctx.roundRect(-12, -12, 24, 24, 5); ctx.fill(); }
+    ctx.strokeStyle = this.on ? '#fff' : 'rgba(255,255,255,.85)'; ctx.lineWidth = 3; ctx.lineCap = 'round';
+    ctx.beginPath();
+    if (this.on) { ctx.moveTo(-6, 4); ctx.lineTo(6, -4); } else { ctx.moveTo(-6, -4); ctx.lineTo(6, 4); }
+    ctx.stroke();
+    ctx.fillStyle = this.on ? '#fff' : 'rgba(255,255,255,.85)';
+    ctx.font = 'bold 7px sans-serif'; ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText(this.on ? 'ON' : 'OFF', 0, 10);
+    ctx.restore();
+  }
+}
+
+/* ============================ PORTAL ========================== */
+// Portal: two of the same color. An object that touches one (ball / falling domino) teleports to the other.
+class Portal extends Entity {
+  constructor(opts = {}) {
+    super(opts);
+    this.type = 'portal';
+    this.r = opts.r || 22;
+    this.color = opts.color || '#22d3ee';
+    this.pair = opts.pair || null;     // paired portal — assigned via Portal.link
+  }
+  static link(a, b) { a.pair = b; b.pair = a; a.color = b.color = a.color; }
+  // teleport an object (with x,y,_portalCd) to the paired portal, preserving velocity.
+  tryTeleport(obj) {
+    if (!this.pair || obj._portalCd > 0) return false;
+    if (dist(obj.x, obj.y, this.x, this.y) < this.r) {
+      const dx = obj.x - this.x, dy = obj.y - this.y; // keep the small offset
+      obj.x = this.pair.x + dx; obj.y = this.pair.y + dy;
+      obj._portalCd = 0.25; this.pair._cd = 0.25; obj._portalCd = 0.3;
+      return true;
+    }
+    return false;
+  }
+  draw(ctx, t = 0) {
+    ctx.save(); ctx.translate(this.x, this.y);
+    const pulse = 0.6 + 0.4 * Math.sin(t / 200);
+    ctx.strokeStyle = this.color; ctx.lineWidth = 3; ctx.shadowColor = this.color; ctx.shadowBlur = 12;
+    ctx.beginPath(); ctx.ellipse(0, 0, this.r, this.r * 0.85, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.globalAlpha = pulse; ctx.lineWidth = 1.5;
+    ctx.beginPath(); ctx.ellipse(0, 0, this.r * 0.6, this.r * 0.5, 0, 0, Math.PI * 2); ctx.stroke();
+    ctx.restore();
+  }
+}
+
+/* ======================== GRAVITY FIELD ====================== */
+// GravityField: a zone that changes gravity.
+//   mode 'high' -> multiplies gravity (e.g. 2.5x): the ball feels heavier, falls faster.
+//   mode 'zero' -> zero gravity: the ball floats.
+class GravityField extends Entity {
+  constructor(opts = {}) {
+    super(opts);
+    this.type = 'gravity-field';
+    this.w = opts.w || 120;
+    this.h = opts.h || 160;
+    this.mode = opts.mode || 'zero';          // 'high' | 'zero' | 'low'
+    this.multiplier = opts.multiplier != null ? opts.multiplier : (this.mode === 'high' ? 3.2 : this.mode === 'low' ? 0.18 : 0);
+    this.enabled = opts.enabled != null ? opts.enabled : true;
+    this.color = opts.color || (this.mode === 'high' ? '#a855f7' : '#38bdf8');
+  }
+  rect() { return { x: this.x, y: this.y, angle: this.angle, w: this.w, h: this.h }; }
+  contains(px, py) { return this.enabled && pointInRect(px, py, this.rect()); }
+  draw(ctx) {
+    ctx.save(); ctx.translate(this.x, this.y); ctx.rotate(this.angle);
+    ctx.globalAlpha = this.enabled ? 1 : 0.25;
+    ctx.fillStyle = this.mode === 'high' ? 'rgba(168,85,247,.10)' : 'rgba(56,189,248,.10)';
+    ctx.beginPath(); ctx.roundRect(-this.w / 2, -this.h / 2, this.w, this.h, 8); ctx.fill();
+    ctx.strokeStyle = this.color; ctx.lineWidth = 1.5; ctx.setLineDash([6, 6]);
+    ctx.beginPath(); ctx.roundRect(-this.w / 2, -this.h / 2, this.w, this.h, 8); ctx.stroke();
+    ctx.setLineDash([]);
+    ctx.fillStyle = this.color; ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    if (this.mode === 'high') {
+      ctx.fillText('⇊ ' + this.multiplier + 'x', 0, -7);
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillText('makes heavier', 0, 7);
+    } else {
+      ctx.fillText(this.mode === 'zero' ? '0g (floating)' : '⇣ ' + this.multiplier + 'x', 0, 0);
+    }
+    ctx.restore();
+  }
+}
+
+// GravitySwitch: like DoorSwitch but toggles GravityField(s) of the same color.
+class GravitySwitch extends DoorSwitch {
+  constructor(opts = {}) {
+    super(opts);
+    this.type = 'gravity-switch';
+    this.on = opts.on != null ? opts.on : true;
+    this.color = opts.color || '#38bdf8';
+  }
+  toggle(world) {
+    this.on = !this.on;
+    world.fieldsOfColor(this.color).forEach(f => { f.enabled = this.on; });
+    this.targets.forEach(f => { f.enabled = this.on; });
+  }
+}
+
+/* ============================ MAGNET ========================= */
+// Magnet: pulls the ball toward it, works in every gravity zone (not disabled by GravityField).
+class Magnet extends Entity {
+  constructor(opts = {}) {
+    super(opts);
+    this.type = 'magnet';
+    this.strength = opts.strength || 45000; // force ~ strength / dist (decreases with distance)
+    this.range = opts.range || 240;
+    this.r = opts.r || 16;
+    this.color = opts.color || '#ef4444';
+    this.pulls = opts.pulls || ['ball'];    // can pull 'ball' and/or 'domino'
+  }
+  // extra acceleration for an object at (px,py). Returns {x,y} or null.
+  accelAt(px, py) {
+    const dx = this.x - px, dy = this.y - py, d = Math.hypot(dx, dy);
+    if (d > this.range) return null;
+    const f = this.strength / Math.max(d, 30); // inverse-linear, clamped to a minimum distance
+    return { x: (dx / d) * f, y: (dy / d) * f };
+  }
+  draw(ctx, t = 0) {
+    ctx.save(); ctx.translate(this.x, this.y);
+    // pull-range ring
+    ctx.strokeStyle = 'rgba(239,68,68,.15)'; ctx.lineWidth = 1; ctx.setLineDash([4, 6]);
+    ctx.beginPath(); ctx.arc(0, 0, this.range, 0, Math.PI * 2); ctx.stroke(); ctx.setLineDash([]);
+    // U-shaped magnet body
+    ctx.fillStyle = this.color;
+    ctx.beginPath(); ctx.arc(0, 0, this.r, Math.PI, 0); ctx.lineTo(this.r, this.r);
+    ctx.lineTo(this.r - 5, this.r); ctx.arc(0, 0, this.r - 5, 0, Math.PI, true);
+    ctx.lineTo(-this.r, this.r); ctx.lineTo(-this.r, this.r - 0); ctx.closePath(); ctx.fill();
+    ctx.fillStyle = '#e5e7eb';
+    ctx.fillRect(-this.r, this.r - 3, 5, 4); ctx.fillRect(this.r - 5, this.r - 3, 5, 4);
+    ctx.restore();
+  }
+}
+
+/* ============================= WORLD ========================= */
+class World {
+  constructor(opts = {}) {
+    this.W = opts.W || 390;
+    this.H = opts.H || 700;
+    this.gravity = opts.gravity != null ? opts.gravity : CONST.GRAVITY;
+    this.substeps = opts.substeps || CONST.SUBSTEPS;
+    this.entities = [];
+    this.ball = null;
+    this.bounds = opts.bounds !== false;  // boundary walls
+    this.status = 'idle';                 // idle|running|won|fell|stuck
+    this.cup = opts.cup || null;          // {x,y} goal (optional)
+    this._cupTimer = 0;
+  }
+
+  add(e) { this.entities.push(e); if (e instanceof Ball) this.ball = e; return e; }
+  remove(e) { const i = this.entities.indexOf(e); if (i >= 0) this.entities.splice(i, 1); }
+
+  // convenience getter groups
+  get dominoes() { return this.entities.filter(e => e instanceof Domino); }
+  doorsOfColor(c) { return this.entities.filter(e => e instanceof Door && e.color === c); }
+  fieldsOfColor(c) { return this.entities.filter(e => e instanceof GravityField && e.color === c); }
+  get statics() { return this.entities.filter(e => e.isStatic && e.isStatic()); }
+  get fields() { return this.entities.filter(e => e instanceof GravityField); }
+  get fans() { return this.entities.filter(e => e instanceof Fan); }
+  get magnets() { return this.entities.filter(e => e instanceof Magnet); }
+  get portals() { return this.entities.filter(e => e instanceof Portal); }
+
+  // Effective gravity at a point (accounting for GravityFields). Returns {x,y,zero}.
+  gravityAt(px, py) {
+    let mult = 1, zero = false;
+    for (const f of this.fields) {
+      if (f.contains(px, py)) {
+        mult *= f.multiplier;                 // zero = falls slowly, high = falls fast
+        if (f.mode === 'zero') zero = true;    // still flag it so dominoes lose balance
+      }
+    }
+    return { x: 0, y: this.gravity * mult, zero };
+  }
+
+  // internal callback when a domino finishes falling: chain reaction + trigger switches
+  _dominoFell(d) {
+    const tipX = d.x + Math.sin(Math.PI / 2) * d.fallDir * d.h;
+    const tipY = d.y - Math.cos(Math.PI / 2) * d.h;
+    for (const o of this.dominoes) {
+      if (o === d || o.state !== 'standing') continue;
+      const dd = dist(o.x, o.y, d.x, d.y);
+      if (dd < CONST.DOMINO_CHAIN && d.fallDir * (o.x - d.x) > 0) o.topple(d.fallDir);
+    }
+  }
+
+  // boundary walls as static rects
+  _boundRects() {
+    if (!this.bounds) return [];
+    const W = this.W, H = this.H;
+    return [
+      { x: W / 2, y: H + 8, angle: 0, w: W + 20, h: 20 },
+      { x: -8, y: H / 2, angle: 0, w: 20, h: H + 20 },
+      { x: W + 8, y: H / 2, angle: 0, w: 20, h: H + 20 },
+      { x: W / 2, y: -8, angle: 0, w: W + 20, h: 20 },
+    ];
+  }
+
+  /* ---- integrate motion + collisions for one frame ---- */
+  step(dt) {
+    const sub = this.substeps, h = dt / sub;
+    for (let s = 0; s < sub; s++) this._substep(h);
+    this._checkGoal(dt);
+    return this.status;
+  }
+
+  _substep(h) {
+    const b = this.ball;
+    // portal cooldown
+    for (const e of this.entities) { if (e._portalCd > 0) e._portalCd = Math.max(0, e._portalCd - h); }
+
+    /* ----- BALL: forces ----- */
+    if (b && !b.dead) {
+      const g = this.gravityAt(b.x, b.y);
+      b.vy += g.y * h; b.vx += g.x * h;
+      // fans
+      for (const f of this.fans) { const F = f.forceAt(b.x, b.y); if (F) { b.vx += F.x * h; b.vy += F.y * h; } }
+      // magnets (every gravity zone)
+      for (const m of this.magnets) {
+        if (!m.pulls.includes('ball')) continue;
+        const a = m.accelAt(b.x, b.y); if (a) { b.vx += a.x * h; b.vy += a.y * h; }
+      }
+      // integrate
+      b.x += b.vx * h; b.y += b.vy * h;
+      // static collisions
+      for (const r of this._boundRects()) resolveBallRect(b, r);
+      for (const e of this.statics) resolveBallRect(b, e.rect(), e.rest);
+      // The CUP has physical walls: 2 side walls + 1 floor, so the ball falls in and rests inside
+      if (this.cup) {
+        const cw = CONST.CUP_W, ch = CONST.CUP_H;
+        resolveBallRect(b, { x: this.cup.x - cw / 2, y: this.cup.y + ch / 2, angle: 0, w: 4, h: ch }, 0.2, 0.9);
+        resolveBallRect(b, { x: this.cup.x + cw / 2, y: this.cup.y + ch / 2, angle: 0, w: 4, h: ch }, 0.2, 0.9);
+        resolveBallRect(b, { x: this.cup.x, y: this.cup.y + ch - 2, angle: 0, w: cw, h: 4 }, 0.2, 0.9);
+      }
+      // standing/falling dominoes block the ball + the ball knocks over dominoes
+      for (const d of this.dominoes) {
+        if (d.state === 'falling') continue;
+        const vxBefore = b.vx; // velocity BEFORE the collision (resolveBallRect will bounce the ball back)
+        const info = resolveBallRect(b, d.rect(), 0.15);
+        if (info && d.state === 'standing') {
+          // The domino must topple AWAY from the ball. wn is the normal pointing toward the ball:
+          //  - hit on the side (wn horizontal) -> topples opposite the normal
+          //  - hit on top (wn vertical) -> topples in the direction the ball is moving
+          let dir;
+          if (Math.abs(info.wn.x) > 0.3) dir = info.wn.x < 0 ? 1 : -1;
+          else dir = vxBefore >= 0 ? 1 : -1;
+          d.topple(dir);
+        }
+      }
+      // portal for the ball
+      for (const p of this.portals) if (p.tryTeleport(b)) break;
+    }
+
+    /* ----- OTHER OBJECTS: update ----- */
+    for (const e of this.entities) {
+      if (e instanceof Ball) continue;
+      e.update(this, h);
+    }
+    // fan blowing on a standing domino -> falls
+    for (const f of this.fans) {
+      if (f.off) continue;
+      for (const d of this.dominoes) {
+        if (d.state !== 'standing') continue;
+        const c = d.centerPoint();
+        const F = f.forceAt(c.x, c.y);
+        if (F) d.topple(F.x >= 0 ? 1 : -1);
+      }
+    }
+    // magnet pulls domino (if configured) — while in free fall
+    for (const m of this.magnets) {
+      if (!m.pulls.includes('domino')) continue;
+      for (const d of this.dominoes) {
+        if (d.state !== 'falling') continue;
+        const a = m.accelAt(d.x, d.y); if (a) { d.vx += a.x * h; d.vy += a.y * h; }
+      }
+    }
+    // portal for a falling domino
+    for (const d of this.dominoes) {
+      if (d.state !== 'falling') continue;
+      for (const p of this.portals) if (p.tryTeleport(d)) break;
+    }
+    // switches (doors + gravity)
+    for (const e of this.entities) if (e.collide) e.collide(this, h);
+  }
+
+  _checkGoal(dt) {
+    const b = this.ball; if (!b || b.dead) return;
+    if (b.y - b.radius > this.H + 80 || b.x < -80 || b.x > this.W + 80) {
+      this.status = 'fell'; b.dead = true; return;
+    }
+    if (this.cup) {
+      const inCup = Math.abs(b.x - this.cup.x) < 24 && b.y > this.cup.y && b.y < this.cup.y + CONST.CUP_H;
+      if (inCup) { this._cupTimer += dt; if (this._cupTimer > 0.35) { this.status = 'won'; b.dead = true; } }
+      else this._cupTimer = 0;
+    }
+    if (this.status === 'idle') this.status = 'running';
+  }
+
+  /* ---- draw everything ---- */
+  draw(ctx, t = 0) {
+    // draw fields first (background), then objects, ball last
+    const order = e => (e instanceof GravityField ? 0 : e instanceof Ball ? 3 : e instanceof Portal ? 1 : 2);
+    [...this.entities].sort((a, b2) => order(a) - order(b2)).forEach(e => e.draw(ctx, t));
+  }
+}
+
+/* ============================ EXPORT ========================= */
+return {
+  CONST, Vec2, World, Entity,
+  Ball, Fan, Platform, Domino,
+  Door, DoorSwitch, Portal,
+  GravityField, GravitySwitch, Magnet,
+  // helpers (useful when extending)
+  helpers: { circleRect, resolveBallRect, pointInRect, rot, dist, clamp },
+};
+
+});
+
+const LEVELS = [
+ {
+  "label": "Tutorial 1",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 80,
+    "y": 120
+   },
+   "cup": {
+    "x": 320,
+    "y": 400
+   },
+   "fixed": [
+    {
+     "kind": "fan",
+     "x": 40,
+     "y": 240,
+     "angle": 1.571,
+     "force": 1500
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "platform",
+     "x": 160,
+     "y": 320,
+     "angle": 0,
+     "w": 200,
+     "h": 14
+    }
+   ]
+  }
+ },
+ {
+  "label": "Tutorial 2",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 80,
+    "y": 280
+   },
+   "cup": {
+    "x": 240,
+    "y": 440
+   },
+   "fixed": [
+    {
+     "kind": "platform",
+     "x": 320,
+     "y": 280,
+     "angle": -1.571,
+     "w": 140,
+     "h": 14
+    },
+    {
+     "kind": "door",
+     "x": 240,
+     "y": 440,
+     "angle": -1.571,
+     "h": 90,
+     "color": "#f59e0b"
+    },
+    {
+     "kind": "door-switch",
+     "x": 280,
+     "y": 240,
+     "angle": 0,
+     "color": "#f59e0b"
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "fan",
+     "x": 40,
+     "y": 280,
+     "angle": 1.571,
+     "force": 1500
+    },
+    {
+     "kind": "fan",
+     "x": 80,
+     "y": 320,
+     "angle": 0,
+     "force": 1500
+    }
+   ]
+  }
+ },
+ {
+  "label": "Level 1.1",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 280,
+    "y": 200
+   },
+   "cup": {
+    "x": 120,
+    "y": 520
+   },
+   "fixed": [
+    {
+     "kind": "fan",
+     "x": 360,
+     "y": 200,
+     "angle": -1.571,
+     "force": 1500
+    },
+    {
+     "kind": "door-switch",
+     "x": 40,
+     "y": 240,
+     "angle": 0,
+     "color": "#f59e0b"
+    },
+    {
+     "kind": "door",
+     "x": 120,
+     "y": 440,
+     "angle": -1.571,
+     "h": 110,
+     "color": "#f59e0b"
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "fan",
+     "x": 40,
+     "y": 560,
+     "angle": 0,
+     "force": 1500
+    },
+    {
+     "kind": "platform",
+     "x": 240,
+     "y": 240,
+     "angle": 0,
+     "w": 140,
+     "h": 14
+    }
+   ]
+  }
+ },
+ {
+  "label": "Level 1.2",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 280,
+    "y": 200
+   },
+   "cup": {
+    "x": 120,
+    "y": 520
+   },
+   "fixed": [
+    {
+     "kind": "fan",
+     "x": 360,
+     "y": 200,
+     "angle": -1.571,
+     "force": 1500
+    },
+    {
+     "kind": "platform",
+     "x": 120,
+     "y": 440,
+     "angle": 0,
+     "w": 120,
+     "h": 14
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "fan",
+     "x": 40,
+     "y": 560,
+     "angle": 0,
+     "force": 1500
+    }
+   ]
+  }
+ },
+ {
+  "label": "Level 2.1",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 628
+   },
+   "ballStart": {
+    "x": 200,
+    "y": 160
+   },
+   "cup": {
+    "x": 200,
+    "y": 440
+   },
+   "fixed": [
+    {
+     "kind": "door-switch",
+     "x": 200,
+     "y": 80,
+     "angle": 0,
+     "color": "#f59e0b"
+    },
+    {
+     "kind": "door",
+     "x": 200,
+     "y": 280,
+     "angle": -1.571,
+     "h": 190,
+     "color": "#f59e0b"
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "fan",
+     "x": 200,
+     "y": 200,
+     "angle": 0,
+     "force": 1500
+    },
+    {
+     "kind": "fan",
+     "x": 360,
+     "y": 200,
+     "angle": -1.571,
+     "force": 1500
+    },
+    {
+     "kind": "fan",
+     "x": 120,
+     "y": 40,
+     "angle": 1.571,
+     "force": 1500
+    }
+   ]
+  }
+ },
+ {
+  "label": "Level 2.2",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 628
+   },
+   "ballStart": {
+    "x": 280,
+    "y": 120
+   },
+   "cup": {
+    "x": 80,
+    "y": 240
+   },
+   "fixed": [
+    {
+     "kind": "door",
+     "x": 80,
+     "y": 240,
+     "angle": -1.571,
+     "h": 90,
+     "color": "#f59e0b"
+    },
+    {
+     "kind": "door-switch",
+     "x": 280,
+     "y": 320,
+     "angle": 0,
+     "color": "#f59e0b"
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "fan",
+     "x": 80,
+     "y": 360,
+     "angle": 0,
+     "force": 1500
+    },
+    {
+     "kind": "platform",
+     "x": 160,
+     "y": 320,
+     "angle": 0,
+     "w": 180,
+     "h": 14
+    },
+    {
+     "kind": "fan",
+     "x": 280,
+     "y": 280,
+     "angle": -1.571,
+     "force": 1500
+    }
+   ]
+  }
+ },
+ {
+  "label": "Level 2.3",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 628
+   },
+   "ballStart": {
+    "x": 120,
+    "y": 440
+   },
+   "cup": {
+    "x": 320,
+    "y": 160
+   },
+   "fixed": [
+    {
+     "kind": "platform",
+     "x": 320,
+     "y": 280,
+     "angle": 0,
+     "w": 200,
+     "h": 14
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "fan",
+     "x": 40,
+     "y": 280,
+     "angle": 1.571,
+     "force": 1500
+    },
+    {
+     "kind": "fan",
+     "x": 120,
+     "y": 480,
+     "angle": 0,
+     "force": 1500
+    },
+    {
+     "kind": "fan",
+     "x": 120,
+     "y": 520,
+     "angle": 0,
+     "force": 1500
+    }
+   ]
+  }
+ },
+ {
+  "label": "Tutorial 3",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 120,
+    "y": 80
+   },
+   "cup": {
+    "x": 280,
+    "y": 560
+   },
+   "fixed": [
+    {
+     "kind": "portal",
+     "x": 120,
+     "y": 360,
+     "angle": 0,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "door-switch",
+     "x": 280,
+     "y": 160,
+     "angle": 0,
+     "color": "#f59e0b",
+     "on": false
+    },
+    {
+     "kind": "door",
+     "x": 280,
+     "y": 560,
+     "angle": 1.571,
+     "h": 90,
+     "color": "#f59e0b",
+     "open": false
+    },
+    {
+     "kind": "fan",
+     "x": 80,
+     "y": 80,
+     "angle": 1.571,
+     "force": 1500
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "portal",
+     "x": 320,
+     "y": 240,
+     "angle": 0,
+     "color": "#22d3ee"
+    }
+   ]
+  }
+ },
+ {
+  "label": "Tutorial 3.2",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 280,
+    "y": 40
+   },
+   "cup": {
+    "x": 200,
+    "y": 440
+   },
+   "fixed": [
+    {
+     "kind": "portal",
+     "x": 120,
+     "y": 120,
+     "angle": 0,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "portal",
+     "x": 280,
+     "y": 480,
+     "angle": 0,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "door-switch",
+     "x": 120,
+     "y": 400,
+     "angle": 0,
+     "color": "#f59e0b",
+     "on": true
+    },
+    {
+     "kind": "door",
+     "x": 200,
+     "y": 320,
+     "angle": -1.571,
+     "h": 270,
+     "color": "#f59e0b",
+     "open": true
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "fan",
+     "x": 120,
+     "y": 480,
+     "angle": 0,
+     "force": 1500
+    },
+    {
+     "kind": "fan",
+     "x": 40,
+     "y": 480,
+     "angle": 1.571,
+     "force": 1500
+    }
+   ]
+  }
+ },
+ {
+  "label": "Tutorial 4",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 80,
+    "y": 160
+   },
+   "cup": {
+    "x": 160,
+    "y": 480
+   },
+   "fixed": [
+    {
+     "kind": "gravity-field",
+     "x": 80,
+     "y": 160,
+     "angle": 0,
+     "w": 120,
+     "h": 160,
+     "mode": "zero",
+     "color": "#38bdf8"
+    },
+    {
+     "kind": "gravity-field",
+     "x": 320,
+     "y": 280,
+     "angle": 0,
+     "w": 120,
+     "h": 160,
+     "mode": "zero",
+     "color": "#38bdf8"
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "fan",
+     "x": 40,
+     "y": 160,
+     "angle": 1.571,
+     "force": 1500
+    },
+    {
+     "kind": "platform",
+     "x": 320,
+     "y": 320,
+     "angle": 0,
+     "w": 140,
+     "h": 14
+    }
+   ]
+  }
+ },
+ {
+  "label": "Tutorial 4.2",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 320,
+    "y": 80
+   },
+   "cup": {
+    "x": 280,
+    "y": 440
+   },
+   "fixed": [
+    {
+     "kind": "platform",
+     "x": 40,
+     "y": 440,
+     "angle": 0,
+     "w": 140,
+     "h": 14
+    },
+    {
+     "kind": "fan",
+     "x": 320,
+     "y": 160,
+     "angle": 0,
+     "force": 1500
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "gravity-field",
+     "x": 160,
+     "y": 400,
+     "angle": -1.571,
+     "w": 120,
+     "h": 160,
+     "mode": "zero",
+     "color": "#38bdf8"
+    },
+    {
+     "kind": "fan",
+     "x": 360,
+     "y": 80,
+     "angle": -1.571,
+     "force": 1500
+    }
+   ]
+  }
+ },
+ {
+  "label": "Level 3.1",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 320,
+    "y": 120
+   },
+   "cup": {
+    "x": 40,
+    "y": 520
+   },
+   "fixed": [
+    {
+     "kind": "platform",
+     "x": 320,
+     "y": 240,
+     "angle": -0.524,
+     "w": 180,
+     "h": 14
+    },
+    {
+     "kind": "gravity-switch",
+     "x": 280,
+     "y": 120,
+     "angle": 0,
+     "color": "#38bdf8",
+     "on": true
+    },
+    {
+     "kind": "gravity-field",
+     "x": 160,
+     "y": 280,
+     "angle": 0,
+     "w": 200,
+     "h": 120,
+     "mode": "high",
+     "color": "#38bdf8"
+    },
+    {
+     "kind": "door-switch",
+     "x": 160,
+     "y": 320,
+     "angle": 0,
+     "color": "#f59e0b",
+     "on": false
+    },
+    {
+     "kind": "door",
+     "x": 40,
+     "y": 520,
+     "angle": -1.571,
+     "h": 90,
+     "color": "#f59e0b"
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "portal",
+     "x": 320,
+     "y": 160,
+     "angle": 0,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "portal",
+     "x": 280,
+     "y": 40,
+     "angle": 0,
+     "color": "#22d3ee"
+    }
+   ]
+  }
+ },
+ {
+  "label": "Level 3.2",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 80,
+    "y": 200
+   },
+   "cup": {
+    "x": 360,
+    "y": 440
+   },
+   "fixed": [
+    {
+     "kind": "portal",
+     "x": 80,
+     "y": 120,
+     "angle": 0,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "fan",
+     "x": 80,
+     "y": 520,
+     "angle": 0,
+     "force": 1500
+    },
+    {
+     "kind": "door",
+     "x": 320,
+     "y": 360,
+     "angle": -1.571,
+     "h": 130,
+     "color": "#f59e0b"
+    },
+    {
+     "kind": "door-switch",
+     "x": 200,
+     "y": 160,
+     "angle": 0,
+     "color": "#f59e0b"
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "portal",
+     "x": 160,
+     "y": 480,
+     "angle": 0,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "fan",
+     "x": 40,
+     "y": 520,
+     "angle": 1.571,
+     "force": 1500
+    }
+   ]
+  }
+ },
+ {
+  "label": "Level 4.1",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 120,
+    "y": 240
+   },
+   "cup": {
+    "x": 280,
+    "y": 440
+   },
+   "fixed": [
+    {
+     "kind": "door",
+     "x": 280,
+     "y": 360,
+     "angle": -1.571,
+     "h": 90,
+     "color": "#f59e0b"
+    },
+    {
+     "kind": "portal",
+     "x": 120,
+     "y": 320,
+     "angle": 0,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "portal",
+     "x": 280,
+     "y": 200,
+     "angle": 0,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "door-switch",
+     "x": 120,
+     "y": 200,
+     "angle": 0,
+     "color": "#f59e0b"
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "fan",
+     "x": 40,
+     "y": 240,
+     "angle": 1.571,
+     "force": 1500
+    },
+    {
+     "kind": "gravity-field",
+     "x": 320,
+     "y": 400,
+     "angle": -1.571,
+     "w": 120,
+     "h": 160,
+     "mode": "zero",
+     "color": "#38bdf8"
+    }
+   ]
+  }
+ },
+ {
+  "label": "Level 4.2",
+  "data": {
+   "canvas": {
+    "w": 386,
+    "h": 625
+   },
+   "ballStart": {
+    "x": 80,
+    "y": 160
+   },
+   "cup": {
+    "x": 200,
+    "y": 520
+   },
+   "fixed": [
+    {
+     "kind": "door",
+     "x": 240,
+     "y": 520,
+     "angle": -1.571,
+     "h": 290,
+     "color": "#f59e0b",
+     "open": true
+    },
+    {
+     "kind": "door",
+     "x": 240,
+     "y": 480,
+     "angle": -1.571,
+     "h": 290,
+     "color": "#ec4899",
+     "open": true
+    },
+    {
+     "kind": "door",
+     "x": 240,
+     "y": 440,
+     "angle": -1.571,
+     "h": 290,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "door-switch",
+     "x": 240,
+     "y": 160,
+     "angle": 0,
+     "color": "#f59e0b",
+     "on": true
+    },
+    {
+     "kind": "door-switch",
+     "x": 280,
+     "y": 160,
+     "angle": 0,
+     "color": "#ec4899",
+     "on": true
+    },
+    {
+     "kind": "door-switch",
+     "x": 320,
+     "y": 160,
+     "angle": 0,
+     "color": "#22d3ee"
+    },
+    {
+     "kind": "gravity-field",
+     "x": 160,
+     "y": 160,
+     "angle": -1.571,
+     "w": 120,
+     "h": 160,
+     "mode": "zero",
+     "color": "#38bdf8"
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "fan",
+     "x": 80,
+     "y": 560,
+     "angle": 0,
+     "force": 1500
+    },
+    {
+     "kind": "fan",
+     "x": 120,
+     "y": 160,
+     "angle": -1.571,
+     "force": 1500
+    },
+    {
+     "kind": "fan",
+     "x": 120,
+     "y": 560,
+     "angle": 0,
+     "force": 1500
+    }
+   ]
+  }
+ },
+ {
+  "label": "Level 5",
+  "data": {
+   "canvas": {
+    "w": 384,
+    "h": 627
+   },
+   "ballStart": {
+    "x": 80,
+    "y": 80
+   },
+   "cup": {
+    "x": 80,
+    "y": 520
+   },
+   "fixed": [
+    {
+     "kind": "portal",
+     "x": 200,
+     "y": 320,
+     "angle": 0,
+     "color": "#ec4899"
+    },
+    {
+     "kind": "portal",
+     "x": 280,
+     "y": 80,
+     "angle": 0,
+     "color": "#ec4899"
+    },
+    {
+     "kind": "door-switch",
+     "x": 160,
+     "y": 80,
+     "angle": 0,
+     "color": "#f59e0b"
+    },
+    {
+     "kind": "door",
+     "x": 80,
+     "y": 480,
+     "angle": -1.571,
+     "h": 130,
+     "color": "#f59e0b"
+    }
+   ],
+   "inventory": [
+    {
+     "kind": "gravity-field",
+     "x": 160,
+     "y": 80,
+     "angle": -1.571,
+     "w": 120,
+     "h": 160,
+     "mode": "zero",
+     "color": "#38bdf8"
+    },
+    {
+     "kind": "fan",
+     "x": 40,
+     "y": 80,
+     "angle": 1.571,
+     "force": 1500
+    },
+    {
+     "kind": "platform",
+     "x": 320,
+     "y": 320,
+     "angle": 0,
+     "w": 140,
+     "h": 14
+    },
+    {
+     "kind": "fan",
+     "x": 200,
+     "y": 400,
+     "angle": 0,
+     "force": 1500
+    }
+   ]
+  }
+ }
+];
+
+/* ===================================================================
+ * Let's Ball - game runtime (uses the embedded BallDrop physics lib)
+ *   - Items come out of the Inventory with neutral rotation (no solution hint)
+ *   - Fans rotate 4 directions; gravity areas rotate horizontal <-> vertical
+ *   - Lose = ball through the ground OR stands still too long
+ *   - Juice: synth SFX, ball trail, sparks, confetti, shake + flash
+ * =================================================================== */
+const { World, Ball, Fan, Platform, Domino, Door, DoorSwitch, Portal,
+        GravityField, GravitySwitch, Magnet } = BallDrop;
+
+const GRID = 40;
+const FAN_DIRS = [0, Math.PI / 2, Math.PI, -Math.PI / 2];
+
+let curLevel = 0;
+let fixedEls = [];
+let inv = [];
+let ballStart = null, cup = null;
+let W = 384, H = 627;
+let sel = -1;
+let running = false, world = null, animId = null, lastT = null, animT = 0;
+let stuckT = 0;
+let tutor2PulseDone = false;
+
+const canvas = document.getElementById('game-canvas');
+const ctx = canvas.getContext('2d');
+
+/* ===================== AUDIO (synth, offline) ===================== */
+let _ac = null, muted = false;
+function ac() {
+  if (!_ac) { try { _ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) { _ac = null; } }
+  if (_ac && _ac.state === 'suspended') _ac.resume();
+  return _ac;
+}
+function tone(freq, dur, type, vol, slideTo) {
+  if (muted) return;
+  const a = ac(); if (!a) return;
+  const o = a.createOscillator(), g = a.createGain();
+  o.type = type || 'sine'; o.frequency.setValueAtTime(freq, a.currentTime);
+  if (slideTo) o.frequency.exponentialRampToValueAtTime(Math.max(1, slideTo), a.currentTime + dur);
+  const v = (vol == null ? 0.2 : vol);
+  g.gain.setValueAtTime(v, a.currentTime);
+  g.gain.exponentialRampToValueAtTime(0.0001, a.currentTime + dur);
+  o.connect(g); g.connect(a.destination);
+  o.start(); o.stop(a.currentTime + dur + 0.02);
+}
+const sfx = {
+  play()   { tone(560, 0.28, 'sawtooth', 0.13, 170); },
+  stop()   { tone(300, 0.12, 'sine', 0.10, 150); },
+  place()  { tone(420, 0.07, 'triangle', 0.13); tone(660, 0.06, 'triangle', 0.07); },
+  rotate() { tone(720, 0.05, 'square', 0.07); },
+  bounce() { tone(150 + Math.random() * 70, 0.06, 'square', 0.06); },
+  portal() { tone(740, 0.12, 'sine', 0.13, 1500); },
+  win()    { [523, 659, 784, 1046].forEach((f, i) => setTimeout(() => tone(f, 0.2, 'triangle', 0.16), i * 95)); },
+  lose()   { tone(330, 0.45, 'sawtooth', 0.16, 70); setTimeout(() => tone(150, 0.3, 'square', 0.10, 60), 70); },
+};
+function toggleMute() {
+  muted = !muted;
+  document.getElementById('b-mute').textContent = muted ? '🔇' : '🔊';
+  if (!muted) ac();
+}
+
+/* ===================== PARTICLES + SHAKE ===================== */
+let particles = [], _lastFrame = 0, shakeMag = 0;
+let trail = [], _prevVy = 0, _prevPos = null, _bounceCd = 0;
+function spawnConfetti(x, y, n) {
+  const cols = ['#fbbf24', '#f43f5e', '#22d3ee', '#a855f7', '#34d399', '#60a5fa', '#fff'];
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = 80 + Math.random() * 230;
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s - 140, life: 1 + Math.random() * 0.9, max: 1.9, grav: 520, size: 2.5 + Math.random() * 3.5, color: cols[i % cols.length] });
+  }
+}
+function spawnSpark(x, y, n, color) {
+  for (let i = 0; i < n; i++) {
+    const a = Math.random() * Math.PI * 2, s = 40 + Math.random() * 130;
+    particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 0.28 + Math.random() * 0.25, max: 0.53, grav: 110, size: 1.4 + Math.random() * 2, color: color || '#fde68a' });
+  }
+}
+function updateParticles(dt) {
+  for (const p of particles) { p.vy += p.grav * dt; p.x += p.vx * dt; p.y += p.vy * dt; p.life -= dt; }
+  if (particles.length) particles = particles.filter(p => p.life > 0);
+}
+function drawParticles(c) {
+  for (const p of particles) {
+    const al = Math.max(0, Math.min(1, p.life / p.max));
+    c.save(); c.globalAlpha = al; c.fillStyle = p.color;
+    c.beginPath(); c.arc(p.x, p.y, p.size, 0, Math.PI * 2); c.fill(); c.restore();
+  }
+}
+function drawTrail(c) {
+  const col = (world && world.ball) ? world.ball.color : '#fbbf24';
+  for (let i = 0; i < trail.length; i++) {
+    const p = trail[i], f = i / trail.length;
+    c.save(); c.globalAlpha = f * 0.45; c.fillStyle = col;
+    c.beginPath(); c.arc(p.x, p.y, f * 8 + 2, 0, Math.PI * 2); c.fill(); c.restore();
+  }
+}
+function flash(type) {
+  const f = document.getElementById('flash');
+  f.className = ''; void f.offsetWidth; f.className = type;
+  setTimeout(() => { f.className = ''; }, 700);
+}
+
+function makeEntity(el) {
+  const o = { x: el.x, y: el.y, angle: el.angle || 0 };
+  switch (el.kind) {
+    case 'platform':       return new Platform({ ...o, w: el.w, h: el.h });
+    case 'fan':            return new Fan({ ...o, force: el.force });
+    case 'domino':         return new Domino(o);
+    case 'door':           return new Door({ ...o, h: el.h, color: el.color, open: !!el.open });
+    case 'door-switch':    return new DoorSwitch({ ...o, color: el.color, on: !!el.on });
+    case 'portal':         return new Portal({ ...o, color: el.color });
+    case 'gravity-field':  return new GravityField({ ...o, w: el.w, h: el.h, mode: el.mode, color: el.color });
+    case 'gravity-switch': return new GravitySwitch({ ...o, color: el.color, on: !!el.on });
+    case 'magnet':         return new Magnet({ ...o, strength: el.strength, range: el.range });
+  }
+}
+const KIND_NAME = { platform: 'Platform', fan: 'Fan', domino: 'Domino', door: 'Door', 'door-switch': 'Switch', portal: 'Portal', 'gravity-field': 'Gravity Zone', 'gravity-switch': 'Gravity Switch', magnet: 'Magnet' };
+
+function hitInfo(el) {
+  switch (el.kind) {
+    case 'platform':       return { cx: el.x, cy: el.y, w: el.w || 140, h: el.h || 14, a: el.angle || 0 };
+    case 'fan':            return { cx: el.x, cy: el.y, w: 40, h: 24, a: el.angle || 0 };
+    case 'door':           return { cx: el.x, cy: el.y, w: 14, h: el.h || 90, a: el.angle || 0 };
+    case 'gravity-field':  return { cx: el.x, cy: el.y, w: el.w || 120, h: el.h || 160, a: el.angle || 0 };
+    case 'door-switch':
+    case 'gravity-switch': return { cx: el.x, cy: el.y, w: 28, h: 28, a: 0 };
+    case 'portal':         return { cx: el.x, cy: el.y, w: 46, h: 40, a: 0 };
+    case 'magnet':         return { cx: el.x, cy: el.y + 6, w: 38, h: 42, a: 0 };
+  }
+  return { cx: el.x, cy: el.y, w: 30, h: 30, a: 0 };
+}
+function hitTest(mx, my, el) {
+  const h = hitInfo(el), dx = mx - h.cx, dy = my - h.cy, a = -h.a;
+  const lx = dx * Math.cos(a) - dy * Math.sin(a), ly = dx * Math.sin(a) + dy * Math.cos(a);
+  return Math.abs(lx) < h.w / 2 + 10 && Math.abs(ly) < h.h / 2 + 10;
+}
+function snap(v) { return Math.round(v / GRID) * GRID; }
+function nearCup(x, y) {
+  if (!cup) return false;
+  const r = 22;
+  return Math.abs(x - cup.x) < 33 + r && y > cup.y - r && y < cup.y + 38 + r;
+}
+
+/* ================= TUTORIAL HINTS ================= */
+function showTutor1Hand() { document.getElementById('hand').classList.add('show'); }
+function hideTutor1Hand() { document.getElementById('hand').classList.remove('show'); }
+function showPointHand() { document.getElementById('point-hand').classList.add('show'); }
+function hidePointHand() { document.getElementById('point-hand').classList.remove('show'); }
+function maybeTutor2Pulse() {
+  if (curLevel !== 1 || tutor2PulseDone) return;
+  const p = document.getElementById('sel-panel');
+  if (p.style.display === 'none') return;
+  tutor2PulseDone = true;
+  p.classList.add('pulse-hint'); showPointHand();
+  p.addEventListener('animationend', () => { p.classList.remove('pulse-hint'); hidePointHand(); }, { once: true });
+}
+
+/* ================= LOAD A LEVEL ================= */
+function loadLevel(i) {
+  stopRun(true);
+  curLevel = (i + LEVELS.length) % LEVELS.length;
+  const L = LEVELS[curLevel];
+  W = L.data.canvas.w; H = L.data.canvas.h;
+  canvas.width = W; canvas.height = H;
+  fixedEls = (L.data.fixed || []).map(e => ({ ...e, fixed: true }));
+  inv = (L.data.inventory || []).map(e => ({ ...e, angle: 0, placed: false, x: 0, y: 0 }));
+  ballStart = L.data.ballStart ? { ...L.data.ballStart } : { x: 80, y: 80 };
+  cup = L.data.cup ? { ...L.data.cup } : null;
+  sel = -1; particles = []; trail = []; shakeMag = 0;
+  document.getElementById('lvllabel').innerHTML =
+    L.label + '<small>' + (curLevel + 1) + '/' + LEVELS.length + '</small>';
+  document.getElementById('nav-prev').disabled = curLevel === 0;
+  document.getElementById('nav-next').disabled = curLevel === LEVELS.length - 1;
+  if (curLevel === 0) showTutor1Hand(); else hideTutor1Hand();
+  buildKho(); buildSelPanel(); hideOverlay(); render();
+}
+function gotoLevel(i) { if (i >= 0 && i < LEVELS.length) loadLevel(i); }
+function resetLayout() { loadLevel(curLevel); toast('↺ All items returned to Inventory'); }
+
+/* ================= KHO (inventory tray) ================= */
+function previewIcon(c, kind, w, h) {
+  c.clearRect(0, 0, w, h);
+  const cx = w / 2, cy = h / 2;
+  if (kind === 'platform') { c.fillStyle = '#6d28d9'; c.beginPath(); c.roundRect(4, cy - 5, w - 8, 10, 3); c.fill(); }
+  else if (kind === 'fan') {
+    c.fillStyle = '#047857'; c.beginPath(); c.roundRect(cx - 11, cy - 7, 22, 14, 4); c.fill();
+    c.fillStyle = '#6ee7b7'; for (let i = 0; i < 3; i++) { c.save(); c.translate(cx, cy); c.rotate(i * Math.PI * 2 / 3); c.beginPath(); c.ellipse(8, 0, 6, 3, 0, 0, Math.PI * 2); c.fill(); c.restore(); }
+  } else if (kind === 'door-switch' || kind === 'gravity-switch') {
+    c.fillStyle = kind === 'gravity-switch' ? '#0ea5e9' : '#f59e0b';
+    c.beginPath(); c.roundRect(cx - 9, cy - 9, 18, 18, 4); c.fill();
+    c.strokeStyle = '#fff'; c.lineWidth = 2.5; c.lineCap = 'round';
+    c.beginPath(); c.moveTo(cx - 4, cy + 3); c.lineTo(cx + 4, cy - 3); c.stroke();
+  } else if (kind === 'portal') {
+    c.strokeStyle = '#22d3ee'; c.lineWidth = 2.5; c.beginPath(); c.ellipse(cx, cy, 9, 7, 0, 0, Math.PI * 2); c.stroke();
+    c.globalAlpha = .6; c.lineWidth = 1.4; c.beginPath(); c.ellipse(cx, cy, 5, 4, 0, 0, Math.PI * 2); c.stroke(); c.globalAlpha = 1;
+  } else if (kind === 'gravity-field') {
+    c.strokeStyle = '#38bdf8'; c.lineWidth = 1.4; c.setLineDash([4, 3]);
+    c.beginPath(); c.roundRect(5, 4, w - 10, h - 8, 4); c.stroke(); c.setLineDash([]);
+    c.fillStyle = '#38bdf8'; c.font = 'bold 8px sans-serif'; c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('0g', cx, cy);
+  } else if (kind === 'door') {
+    c.fillStyle = '#dc2626'; c.beginPath(); c.roundRect(cx - 4, 3, 8, h - 6, 2); c.fill();
+  }
+}
+function buildKho() {
+  const wrap = document.getElementById('kho-items'); wrap.innerHTML = '';
+  const free = inv.map((it, idx) => ({ it, idx })).filter(o => !o.it.placed);
+  if (!free.length) {
+    const e = document.createElement('div'); e.className = 'kho-empty';
+    e.textContent = 'Inventory empty — all items are already on the map.'; wrap.appendChild(e); return;
+  }
+  free.forEach(({ it, idx }) => {
+    const chip = document.createElement('div'); chip.className = 'chip';
+    const pc = document.createElement('canvas'); pc.width = 44; pc.height = 26;
+    previewIcon(pc.getContext('2d'), it.kind, 44, 26); chip.appendChild(pc);
+    const nm = document.createElement('div'); nm.className = 'nm'; nm.textContent = KIND_NAME[it.kind] || it.kind; chip.appendChild(nm);
+    chip.addEventListener('pointerdown', e => startChipDrag(e, idx));
+    wrap.appendChild(chip);
+  });
+}
+
+/* ================= RENDER ================= */
+function drawGrid() {
+  ctx.save(); ctx.strokeStyle = 'rgba(255,255,255,.04)'; ctx.lineWidth = 1;
+  for (let x = 0; x < W; x += GRID) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+  for (let y = 0; y < H; y += GRID) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+  ctx.restore();
+}
+function drawCup(c, p) {
+  const w = 66, h = 38, x = p.x, y = p.y;
+  const pulse = 0.5 + 0.5 * Math.sin(animT / 300);
+  c.save(); c.strokeStyle = '#f43f5e'; c.lineWidth = 3; c.lineCap = 'round';
+  c.shadowColor = '#f43f5e'; c.shadowBlur = 5 + pulse * 9;
+  [[x - w / 2, y, x - w / 2, y + h], [x + w / 2, y, x + w / 2, y + h], [x - w / 2, y + h, x + w / 2, y + h]]
+    .forEach(([a, b, d, e]) => { c.beginPath(); c.moveTo(a, b); c.lineTo(d, e); c.stroke(); });
+  c.shadowBlur = 0; c.fillStyle = '#f43f5e'; c.font = '16px sans-serif';
+  c.textAlign = 'center'; c.textBaseline = 'middle'; c.fillText('★', x, y + h / 2); c.restore();
+}
+function drawBallStart(c, p) {
+  c.save(); c.beginPath(); c.arc(p.x, p.y, 11, 0, Math.PI * 2);
+  c.fillStyle = 'rgba(251,191,36,.18)'; c.fill();
+  c.strokeStyle = '#fbbf24'; c.lineWidth = 1.5; c.setLineDash([3, 3]); c.stroke(); c.setLineDash([]);
+  c.restore();
+}
+function drawMovable(el, isSel) {
+  const h = hitInfo(el);
+  ctx.save(); ctx.translate(h.cx, h.cy); ctx.rotate(h.a);
+  const hw = h.w / 2, hh = h.h / 2;
+  ctx.strokeStyle = isSel ? '#a78bfa' : 'rgba(34,197,94,.7)';
+  ctx.lineWidth = isSel ? 2.4 : 1.5; ctx.setLineDash(isSel ? [] : [4, 4]);
+  ctx.beginPath(); ctx.roundRect(-hw - 4, -hh - 4, h.w + 8, h.h + 8, 6); ctx.stroke();
+  ctx.setLineDash([]); ctx.restore();
+}
+function placedInv() { return inv.map((it, idx) => ({ it, idx })).filter(o => o.it.placed); }
+function render(t) {
+  const now = t || animT;
+  let dt = (now - _lastFrame) / 1000; if (!isFinite(dt) || dt < 0) dt = 0; if (dt > 0.05) dt = 0.05;
+  _lastFrame = now; animT = now;
+  updateParticles(dt);
+  if (shakeMag > 0) { shakeMag -= dt * 26; if (shakeMag < 0) shakeMag = 0; }
+
+  ctx.setTransform(1, 0, 0, 1, 0, 0);
+  ctx.clearRect(0, 0, W, H);
+  ctx.fillStyle = '#0d1b2a'; ctx.fillRect(0, 0, W, H);
+
+  ctx.save();
+  if (shakeMag > 0) ctx.translate((Math.random() - 0.5) * shakeMag, (Math.random() - 0.5) * shakeMag);
+  drawGrid();
+  ctx.fillStyle = 'rgba(220,38,38,.10)'; ctx.fillRect(0, H - 6, W, 6);
+  ctx.strokeStyle = 'rgba(248,113,113,.35)'; ctx.lineWidth = 2; ctx.setLineDash([8, 6]);
+  ctx.beginPath(); ctx.moveTo(0, H - 3); ctx.lineTo(W, H - 3); ctx.stroke(); ctx.setLineDash([]);
+
+  if (running && world) {
+    drawTrail(ctx);
+    world.draw(ctx, animT);
+    if (cup) drawCup(ctx, cup);
+  } else {
+    const drawList = [...fixedEls.map(el => ({ el, sel: false })),
+                      ...placedInv().map(o => ({ el: o.it, sel: o.idx === sel, mov: true }))];
+    drawList.sort((a, b) => (a.el.kind === 'gravity-field' ? 0 : 1) - (b.el.kind === 'gravity-field' ? 0 : 1));
+    for (const d of drawList) { makeEntity(d.el).draw(ctx, animT); if (d.mov) drawMovable(d.el, d.sel); }
+    if (ghostDrag && ghostDrag.over) { ctx.save(); ctx.globalAlpha = .5; makeEntity(ghostEl()).draw(ctx, animT); ctx.restore(); }
+    if (cup) drawCup(ctx, cup);
+    if (ballStart) drawBallStart(ctx, ballStart);
+  }
+  drawParticles(ctx);
+  ctx.restore();
+}
+
+/* ================= SELECT / ROTATE PANEL ================= */
+function buildSelPanel() {
+  const p = document.getElementById('sel-panel');
+  if (sel < 0 || running || inv[sel] == null || !inv[sel].placed) { p.style.display = 'none'; hidePointHand(); return; }
+  const el = inv[sel];
+  p.style.display = 'flex'; p.innerHTML = '';
+  const lab = document.createElement('span'); lab.className = 'sel-label';
+  lab.textContent = KIND_NAME[el.kind] || el.kind;
+  p.appendChild(lab);
+  if (el.kind === 'fan') {
+    addBtn(p, '↺', () => rotateFan(el, -1));
+    addBtn(p, '↻', () => rotateFan(el, +1));
+    const d = document.createElement('span'); d.className = 'sel-label'; d.style.color = '#64748b';
+    d.id = 'dirlabel'; d.textContent = fanDirName(el.angle); p.appendChild(d);
+  } else if (el.kind === 'gravity-field') {
+    addBtn(p, '↔', () => setGravOrient(el, false));
+    addBtn(p, '↕', () => setGravOrient(el, true));
+    const d = document.createElement('span'); d.className = 'sel-label'; d.style.color = '#64748b';
+    d.id = 'dirlabel'; d.textContent = gravDirName(el); p.appendChild(d);
+  } else {
+    const t = document.createElement('span'); t.className = 'sel-label'; t.style.color = '#64748b';
+    t.textContent = '(drag to move)'; p.appendChild(t);
+  }
+  addBtn(p, '🎒', () => { el.placed = false; sel = -1; buildKho(); buildSelPanel(); render(); }).classList.add('danger');
+}
+function addBtn(row, label, fn) {
+  const b = document.createElement('button'); b.className = 'mini'; b.textContent = label; b.onclick = fn; row.appendChild(b); return b;
+}
+function rotateFan(el, dir) {
+  hidePointHand();
+  let i = FAN_DIRS.findIndex(a => Math.abs(Math.atan2(Math.sin(a - el.angle), Math.cos(a - el.angle))) < 0.1);
+  if (i < 0) i = 0;
+  i = (i + dir + 4) % 4; el.angle = FAN_DIRS[i];
+  sfx.rotate();
+  const d = document.getElementById('dirlabel'); if (d) d.textContent = fanDirName(el.angle);
+  render();
+}
+function fanDirName(a) {
+  const i = FAN_DIRS.findIndex(x => Math.abs(Math.atan2(Math.sin(x - a), Math.cos(x - a))) < 0.1);
+  return ['↑ Up', '→ Right', '↓ Down', '← Left'][i < 0 ? 0 : i];
+}
+// Orientation is decided by the field's RENDERED shape (wide vs tall),
+// not the raw angle value, so the button always matches what is seen.
+function gravIsVertical(el) {
+  const w = el.w || 120, h = el.h || 160, rot = Math.abs(Math.sin(el.angle || 0)) > 0.5;
+  const rW = rot ? h : w, rH = rot ? w : h;
+  return rH > rW;
+}
+function gravDirName(el) { return gravIsVertical(el) ? '↕ Vertical' : '↔ Horizontal'; }
+function setGravOrient(el, wantVertical) {
+  const w = el.w || 120, h = el.h || 160, tallAt0 = h > w;
+  el.angle = (tallAt0 === wantVertical) ? 0 : Math.PI / 2;
+  sfx.rotate();
+  const d = document.getElementById('dirlabel'); if (d) d.textContent = gravDirName(el);
+  render();
+}
+
+/* ================= POINTER: drag from Kho + move placed ================= */
+function canvasPos(e) {
+  const r = canvas.getBoundingClientRect();
+  return { x: (e.clientX - r.left) * (W / r.width), y: (e.clientY - r.top) * (H / r.height) };
+}
+function overCanvas(e) {
+  const r = canvas.getBoundingClientRect();
+  return e.clientX >= r.left && e.clientX <= r.right && e.clientY >= r.top && e.clientY <= r.bottom;
+}
+const ghost = document.getElementById('ghost');
+const ghostCtx = ghost.getContext('2d');
+let ghostDrag = null;
+let moveDrag = null;
+function ghostEl() { const it = inv[ghostDrag.invIdx]; return { ...it, x: ghostDrag.gx, y: ghostDrag.gy }; }
+
+function startChipDrag(e, invIdx) {
+  if (running) return;
+  e.preventDefault();
+  hideTutor1Hand(); ac();
+  ghostDrag = { invIdx, over: false, gx: 0, gy: 0 };
+  ghost.style.display = 'block';
+  moveGhost(e.clientX, e.clientY);
+}
+function moveGhost(cx, cy) {
+  if (!ghostDrag) return;
+  ghost.style.left = (cx - 32) + 'px'; ghost.style.top = (cy - 20) + 'px';
+  ghostCtx.clearRect(0, 0, 64, 40); previewIcon(ghostCtx, inv[ghostDrag.invIdx].kind, 64, 40);
+  const p = canvasPos({ clientX: cx, clientY: cy });
+  const inb = overCanvas({ clientX: cx, clientY: cy }) && p.x > 4 && p.x < W - 4 && p.y > 4 && p.y < H - 4;
+  const it = inv[ghostDrag.invIdx];
+  ghostDrag.over = inb && !(it.kind === 'portal' && nearCup(snap(p.x), snap(p.y)));
+  ghostDrag.gx = snap(p.x); ghostDrag.gy = snap(p.y);
+  render();
+}
+function dropGhost(cx, cy) {
+  if (!ghostDrag) return;
+  const p = canvasPos({ clientX: cx, clientY: cy });
+  const inb = overCanvas({ clientX: cx, clientY: cy }) && p.x > 4 && p.x < W - 4 && p.y > 4 && p.y < H - 4;
+  const it = inv[ghostDrag.invIdx];
+  let placedFan = false, didPlace = false;
+  if (inb) {
+    const sx = snap(p.x), sy = snap(p.y);
+    if (it.kind === 'portal' && nearCup(sx, sy)) { toast("⚠ Can't place a Portal on the Cup"); }
+    else { it.placed = true; it.x = sx; it.y = sy; sel = ghostDrag.invIdx; placedFan = (it.kind === 'fan'); didPlace = true; }
+  }
+  ghostDrag = null; ghost.style.display = 'none';
+  buildKho(); buildSelPanel(); render();
+  if (didPlace) { sfx.place(); spawnSpark(inv[sel].x, inv[sel].y, 8, '#a78bfa'); }
+  if (placedFan) maybeTutor2Pulse();
+}
+
+canvas.addEventListener('pointerdown', e => {
+  if (running || ghostDrag) return;
+  e.preventDefault();
+  const p = canvasPos(e);
+  const placed = placedInv();
+  for (let k = placed.length - 1; k >= 0; k--) {
+    const { it, idx } = placed[k];
+    if (hitTest(p.x, p.y, it)) {
+      moveDrag = { invIdx: idx, sx: p.x, sy: p.y, moved: false };
+      sel = idx; buildSelPanel(); render(); return;
+    }
+  }
+  sel = -1; buildSelPanel(); render();
+});
+window.addEventListener('pointermove', e => {
+  if (ghostDrag) { moveGhost(e.clientX, e.clientY); return; }
+  if (moveDrag) {
+    const p = canvasPos(e);
+    if (Math.hypot(p.x - moveDrag.sx, p.y - moveDrag.sy) > 5) moveDrag.moved = true;
+    const it = inv[moveDrag.invIdx];
+    if (moveDrag.moved) {
+      const nx = Math.max(0, Math.min(W, snap(p.x))), ny = Math.max(0, Math.min(H, snap(p.y)));
+      if (!(it.kind === 'portal' && nearCup(nx, ny))) { it.x = nx; it.y = ny; }
+      render();
+    }
+  }
+});
+window.addEventListener('pointerup', e => {
+  if (ghostDrag) { dropGhost(e.clientX, e.clientY); return; }
+  if (moveDrag) {
+    if (moveDrag.moved && !overCanvas(e)) {
+      inv[moveDrag.invIdx].placed = false; sel = -1; buildKho(); buildSelPanel();
+    }
+    moveDrag = null; render();
+  }
+});
+
+/* ================= BUILD WORLD + PLAY ================= */
+function buildWorld() {
+  const w = new World({ W, H, bounds: true, cup: cup ? { ...cup } : null });
+  w._boundRects = function () {
+    const Wd = this.W, Ht = this.H;
+    return [
+      { x: -8, y: Ht / 2, angle: 0, w: 20, h: Ht + 20 },     // left
+      { x: Wd + 8, y: Ht / 2, angle: 0, w: 20, h: Ht + 20 }, // right
+      { x: Wd / 2, y: -8, angle: 0, w: Wd + 20, h: 20 },     // top (no bottom -> fall = lose)
+    ];
+  };
+  const all = [...fixedEls, ...inv.filter(it => it.placed)];
+  const byColor = {};
+  for (const el of all) {
+    const e = makeEntity(el); w.add(e);
+    if (el.kind === 'portal') (byColor[el.color] = byColor[el.color] || []).push(e);
+  }
+  for (const col in byColor) { const a = byColor[col]; for (let i = 0; i + 1 < a.length; i += 2) Portal.link(a[i], a[i + 1]); }
+  if (ballStart) w.add(new Ball({ x: ballStart.x, y: ballStart.y }));
+  return w;
+}
+function togglePlay() {
+  if (running) { stopRun(); sfx.stop(); toast('■ Stopped — ball reset to start'); return; }
+  if (!ballStart) { toast('⚠ This level has no ball drop point'); return; }
+  hideTutor1Hand();
+  sel = -1; buildSelPanel(); hideOverlay();
+  running = true; stuckT = 0; trail = []; _prevVy = 0; _prevPos = null; _bounceCd = 0;
+  world = buildWorld(); lastT = null;
+  sfx.play();
+  const pb = document.getElementById('b-play'); pb.classList.add('stop'); pb.textContent = '■ Stop';
+  document.getElementById('b-reset').disabled = true;
+  animId = requestAnimationFrame(loop);
+}
+function loop(ts) {
+  if (!running) return;
+  if (!lastT) lastT = ts;
+  const dt = Math.min((ts - lastT) / 1000, 0.05); lastT = ts;
+  const st = world.step(dt);
+  // effects from the ball
+  const b = world.ball;
+  if (b && !b.dead) {
+    _bounceCd -= dt;
+    if (_prevPos && Math.hypot(b.x - _prevPos.x, b.y - _prevPos.y) > 70) { sfx.portal(); spawnSpark(b.x, b.y, 12, '#22d3ee'); }
+    if (_prevVy > 70 && b.vy < -45 && _bounceCd <= 0) { sfx.bounce(); spawnSpark(b.x, b.y + b.radius, 6, '#fde68a'); _bounceCd = 0.09; }
+    _prevVy = b.vy; _prevPos = { x: b.x, y: b.y };
+    trail.push({ x: b.x, y: b.y }); if (trail.length > 16) trail.shift();
+  }
+  render(ts);
+  if (st === 'won') { win(); return; }
+  if (st === 'fell') { lose(); return; }
+  if (b && !b.dead) {
+    const sp = Math.hypot(b.vx, b.vy);
+    if (sp < 14) stuckT += dt; else stuckT = 0;
+    if (stuckT > 1.6) { lose(); return; }
+  }
+  animId = requestAnimationFrame(loop);
+}
+function stopRun(silent) {
+  if (animId) cancelAnimationFrame(animId);
+  animId = null; running = false; world = null; lastT = null; trail = [];
+  const pb = document.getElementById('b-play');
+  if (pb) { pb.classList.remove('stop'); pb.textContent = '▶ Play'; }
+  const rb = document.getElementById('b-reset'); if (rb) rb.disabled = false;
+  if (!silent) render();
+}
+
+/* ================= WIN / LOSE ================= */
+function lose() {
+  const b = world && world.ball;
+  const bx = b ? b.x : W / 2, by = b ? b.y : H - 20;
+  stopRun();
+  sfx.lose(); shakeMag = 11; flash('lose'); spawnSpark(bx, by, 16, '#f87171');
+  setTimeout(() => showOverlay('😵', 'Aw man, you lost', 'The ball hit the ground or stood still too long',
+    [['Try again', 'go', () => { hideOverlay(); }]]), 520);
+}
+function win() {
+  stopRun();
+  sfx.win(); flash('win');
+  if (cup) { spawnConfetti(cup.x, cup.y, 64); spawnConfetti(cup.x, cup.y - 10, 30); }
+  const last = curLevel === LEVELS.length - 1;
+  const acts = last
+    ? [['🔁 Play again', 'gray', () => { hideOverlay(); }], ['Back to Level 1', 'go', () => gotoLevel(0)]]
+    : [['Stay', 'gray', () => { hideOverlay(); }], ['Next level →', 'go', () => gotoLevel(curLevel + 1)]];
+  setTimeout(() => showOverlay('🎉', last ? 'You beat them all!' : 'Awesome, level cleared!',
+    last ? 'You conquered Let’s Ball 🏆' : 'The ball made it into the cup ★', acts), 750);
+}
+function showOverlay(emoji, text, sub, actions) {
+  document.getElementById('ov-emoji').textContent = emoji;
+  document.getElementById('ov-text').textContent = text;
+  document.getElementById('ov-sub').textContent = sub || '';
+  const wrap = document.getElementById('ov-actions'); wrap.innerHTML = '';
+  (actions || []).forEach(([label, cls, fn]) => {
+    const b = document.createElement('button'); b.className = 'ovbtn ' + cls; b.textContent = label; b.onclick = fn; wrap.appendChild(b);
+  });
+  document.getElementById('overlay').classList.add('show');
+}
+function hideOverlay() { document.getElementById('overlay').classList.remove('show'); render(); }
+
+let toastTimer = null;
+function toast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg; t.style.display = 'block';
+  clearTimeout(toastTimer); toastTimer = setTimeout(() => { t.style.display = 'none'; }, 1800);
+}
+
+/* ================= INIT ================= */
+loadLevel(0);
+(function idle(ts) { animT = ts; if (!running) render(ts); requestAnimationFrame(idle); })(0);
+</script>
+</body>
+</html>

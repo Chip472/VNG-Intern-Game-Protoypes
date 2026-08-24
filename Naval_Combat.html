@@ -1,0 +1,2481 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Naval TD — Level 1 Prototype</title>
+<style>
+:root{
+  --brass:#d4af37; --brass-light:#f0c674; --ink:#241708; --parchment:#e8d5a8;
+  --mid-lane: rgba(90,170,230,0.28); --top-lane: rgba(90,170,230,0.28);
+  --danger: rgba(224,70,60,0.55);
+}
+*{box-sizing:border-box;}
+body{margin:0;background:#0a1620;font-family:'Trebuchet MS','Segoe UI',Arial,sans-serif;color:var(--parchment);}
+#app{width:1532px;margin:0 auto;display:flex;flex-direction:column;}
+.topbar{height:50px;background:linear-gradient(180deg,#2a1c10,#1a1108);border-bottom:3px solid var(--brass);
+  display:flex;align-items:center;padding:0 16px;gap:20px;}
+.topbar .title{font-weight:bold;color:var(--brass-light);font-family:Georgia,serif;margin-right:auto;}
+.levelTabs{display:flex;gap:4px;}
+.levelTabs button{background:rgba(0,0,0,0.3);border:2px solid rgba(212,175,55,0.4);color:#c9b98a;
+  font-weight:bold;font-size:12px;padding:6px 12px;border-radius:7px;cursor:pointer;}
+.levelTabs button.active{background:linear-gradient(180deg,var(--brass-light),var(--brass));color:#241708;border-color:var(--brass-light);}
+.chip{background:rgba(0,0,0,0.3);border:1px solid rgba(212,175,55,0.5);border-radius:8px;padding:5px 12px;font-weight:bold;font-size:14px;color:var(--brass-light);}
+#startBattleBtn{background:linear-gradient(180deg,#5a4a3a,#3a2e22);border:2px solid rgba(212,175,55,0.4);
+  color:#c9b98a;font-weight:bold;padding:8px 16px;border-radius:8px;cursor:default;font-size:13px;}
+#startBattleBtn.ready{background:linear-gradient(180deg,#a3402f,#6a2020);border-color:var(--brass-light);color:#fff;cursor:pointer;}
+/* While in battle: this button switches roles to Pause/Resume (merged in, separate Pause button removed) */
+#startBattleBtn.combatBtn{cursor:pointer;background:linear-gradient(180deg,#3a5a4a,#1e3a2e);border-color:#6ee0a8;color:#fff;}
+#startBattleBtn.combatBtn.paused{background:linear-gradient(180deg,#a3402f,#6a2020);border-color:var(--brass-light);}
+.speedCtrl{display:flex;gap:4px;}
+.speedCtrl button{background:rgba(0,0,0,0.3);border:2px solid rgba(212,175,55,0.4);color:#c9b98a;
+  font-weight:bold;font-size:12px;padding:6px 10px;border-radius:7px;cursor:pointer;}
+.speedCtrl button:hover{border-color:var(--brass-light);}
+.speedCtrl .speedBtn.active{background:linear-gradient(180deg,var(--brass-light),var(--brass));color:#241708;border-color:var(--brass-light);}
+/* PULSE ATTENTION — shared by every spot the tutorial wants to shout "click here" */
+.pulseAttn{animation:pulseAttnGlow 1s ease-in-out infinite;position:relative;z-index:5;}
+@keyframes pulseAttnGlow{0%,100%{box-shadow:0 0 0 0 rgba(142,224,255,0.85);}50%{box-shadow:0 0 0 10px rgba(142,224,255,0);}}
+.main{display:flex;gap:10px;padding:10px;}
+/* LEFT WAVE PANEL */
+#wavePanel{width:290px;background:rgba(20,14,4,0.55);border:2px solid var(--brass);border-radius:8px;padding:10px;}
+#wavePanel h3{margin:0 0 4px;color:var(--brass-light);font-size:13px;text-transform:uppercase;}
+#waveCounter{font-size:12px;color:#c9b98a;margin-bottom:8px;}
+.enemyRow{display:flex;align-items:center;gap:6px;background:rgba(0,0,0,0.25);border-radius:6px;padding:5px 7px;margin-bottom:5px;font-size:11px;cursor:default;position:relative;}
+.enemyRow .idx{font-size:10px;color:#c9b98a;width:14px;text-align:right;}
+.enemyRow .eic{font-size:18px;width:22px;text-align:center;}
+.enemyRow .nm{font-weight:bold;color:var(--brass-light);font-size:11.5px;flex:1;}
+.enemyRow.done{opacity:0.35;text-decoration:line-through;}
+.enemyRow .spawnEta{font-size:10px;color:#8ee0ff;white-space:nowrap;}
+.enemyRow .tooltip{top:0;left:105%;right:auto;}
+#waveToggleBtn{width:100%;margin-bottom:8px;background:rgba(0,0,0,0.3);border:1px solid rgba(212,175,55,0.5);
+  color:var(--brass-light);border-radius:6px;padding:5px;font-size:10.5px;cursor:pointer;}
+.waveGroupTitle{font-size:10.5px;color:var(--brass-light);font-weight:bold;margin:6px 0 3px;text-transform:uppercase;}
+/* SELECTED SHIP PANEL (upgrade) — old-style layout */
+#selectedBox{background:rgba(0,0,0,0.3);border:2px solid var(--brass);border-radius:8px;padding:9px;margin-top:10px;display:none;}
+#selectedBox.open{display:block;}
+#selectedBox .selTitle{color:var(--brass-light);font-weight:bold;font-size:12.5px;margin-bottom:5px;}
+#selectedBox .statRow{display:flex;justify-content:space-between;font-size:11px;padding:1.5px 0;}
+#selectedBox .statRow b{color:var(--brass-light);}
+#selectedBox .statRow b.upgraded{color:#f0e64e;}
+#upgradeBtn{width:100%;padding:7px;margin-top:6px;font-size:11.5px;border-radius:7px;font-weight:bold;cursor:pointer;
+  border:2px solid var(--brass);color:#241708;background:linear-gradient(180deg,var(--brass-light),var(--brass));}
+#upgradeBtn:disabled{opacity:0.4;cursor:not-allowed;}
+#upgradeBtn.done{background:linear-gradient(180deg,#5a4a3a,#3a2e22);color:#c9b98a;}
+/* GRID — open sea: no boxed borders per cell, just one continuous sea background + dashed lines marking lanes.
+   #gridWrap is DELIBERATELY bigger than the interactive grid area (#grid) — the extra margin around it is
+   decorative sea/island border (like the old UI, makes the map feel wide), you CANNOT place ships there,
+   and it isn't counted in (r,c) coordinates. */
+#gridWrap{position:relative;width:912px;height:580px;flex-shrink:0;
+  background:linear-gradient(180deg,#1c5b82,#0d3450);border:2px solid var(--brass);border-radius:6px;overflow:hidden;}
+#decorLayer{position:absolute;inset:0;pointer-events:none;}
+#decorLayer span{position:absolute;font-size:26px;opacity:0.4;}
+#laneSvg{position:absolute;left:132px;top:110px;width:648px;height:360px;pointer-events:none;}
+#grid{position:absolute;display:grid;}
+.cell{position:relative;display:flex;align-items:center;justify-content:center;box-sizing:border-box;
+  border:1px solid rgba(255,255,255,0.07);}
+/* BUILDABLE CELL — a clear border so the player can tell at a glance where they can drop a ship and
+   where they can't (it used to be a near-invisible 0.07-opacity border, so the map looked like one solid
+   sheet of sea with no cells). */
+.cell.placeable{border:1px solid rgba(212,175,55,0.38);background:rgba(255,255,255,0.03);}
+.cell.placeable:hover{border-color:rgba(240,198,116,0.85);background:rgba(240,198,116,0.10);}
+.cell.island::after{content:'🏝️';font-size:calc(var(--cell,72px) * 0.34);opacity:0.5;}
+.cell.whirlpool::after{content:'🌀';font-size:26px;opacity:0.75;animation:whirlSpin 3s linear infinite;}
+.cell.whirlpool.armed::after{opacity:1;filter:drop-shadow(0 0 8px #ff3b3b);}
+.cell.whirlpool.armed{background:rgba(224,70,60,0.35);}
+@keyframes whirlSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.whirlCountdownTag{position:absolute;width:var(--cell,72px);text-align:center;font-size:11px;font-weight:bold;color:#fff;
+  text-shadow:0 1px 3px #000;pointer-events:none;z-index:15;}
+.cell.highlight{background:rgba(90,170,230,0.30);border-radius:4px;}
+/* uses box-shadow (not background) so it's NOT overridden by .cell.highlight.danger (the red background
+   predicting the enemy lane, which has higher specificity) — box-shadow always draws on top regardless of
+   whatever background color is underneath. */
+.cell.rangePreview{box-shadow:inset 0 0 0 3px rgba(142,224,255,0.9);border-radius:4px;}
+.cell.enemyRangePreview{box-shadow:inset 0 0 0 3px rgba(209,89,78,0.85);border-radius:4px;}
+.cell.spawn::after{content:'🏴‍☠️';font-size:calc(var(--cell,72px) * 0.32);}
+.cell.fortress::after{content:'🚢';font-size:calc(var(--cell,72px) * 0.36);}
+.fortHpTag{position:absolute;width:var(--cell,72px);pointer-events:none;text-align:center;z-index:20;}
+.fortHpTag .bar{width:48px;height:6px;background:rgba(0,0,0,0.65);border-radius:3px;margin:0 auto;overflow:hidden;border:1px solid rgba(0,0,0,0.4);}
+.fortHpTag .bar i{display:block;height:100%;transition:width 0.3s,background 0.3s;}
+.fortHpTag .num{font-size:9px;color:#fff;font-weight:bold;text-shadow:0 1px 2px #000;margin-top:1px;}
+.cell.highlightSlot{outline:3px dashed #8ee0ff;outline-offset:-3px;animation:pulseSlot 1.1s infinite;border-radius:4px;}
+@keyframes pulseSlot{0%,100%{box-shadow:0 0 0 0 rgba(142,224,255,0.7) inset;}50%{box-shadow:0 0 0 8px rgba(142,224,255,0) inset;}}
+.cell.dropTarget{outline:2px solid #8ee08e;outline-offset:-2px;border-radius:4px;}
+.laneArrow{position:absolute;font-size:17px;pointer-events:none;text-shadow:0 0 4px #000;transition:top 0.3s;}
+.laneArrow.man2RouteTag{font-size:12px;font-weight:bold;background:rgba(0,0,0,0.72);border:1px solid rgba(212,175,55,0.6);
+  border-radius:5px;padding:1px 6px;white-space:nowrap;color:#ffd9a0;pointer-events:auto;cursor:default;}
+.laneThreatTag{position:absolute;font-size:10px;background:rgba(0,0,0,0.72);border:1px solid rgba(212,175,55,0.6);
+  border-radius:5px;padding:1px 5px;color:#ff9d6e;font-weight:bold;white-space:nowrap;pointer-events:auto;cursor:default;}
+/* Breakdown: hover over the Threat label to see CLEARLY which ships add up to it — this is the part
+   players misunderstand most often (Threat stacks per lane/cell from multiple ships), so we added a
+   visible sum instead of only mentioning it in a caption that flashes by. */
+.laneThreatTag .breakdown, .laneArrow.man2RouteTag .breakdown{
+  position:absolute;top:100%;left:0;margin-top:3px;display:none;background:rgba(15,10,4,0.97);
+  border:2px solid var(--brass);border-radius:6px;padding:5px 7px;font-size:10px;color:#e8dcc0;font-weight:normal;
+  white-space:nowrap;z-index:70;text-align:left;line-height:1.5;}
+.laneThreatTag:hover .breakdown, .laneArrow.man2RouteTag:hover .breakdown{display:block;}
+/* SHIP / ENEMY SPRITES */
+/* SMOOTH pixel-by-pixel movement between 2 cells (no snapping) — makes it easy to tell units apart
+   when several move together. --stepdur is reset by JS every time the speed changes (x1/x2/x4) so it
+   always matches the timing of 1 step. */
+.sprite{position:absolute;width:var(--cell,72px);height:var(--cell,72px);display:flex;align-items:center;justify-content:center;
+  flex-direction:column;pointer-events:none;
+  transition:left var(--stepdur,0.9s) linear, top var(--stepdur,0.9s) linear;}
+.sprite.preview{transition:none;}
+.sprite .ic{font-size:calc(var(--cell,72px) * 0.36);filter:drop-shadow(0 2px 2px #000);}
+.sprite .hpbar{width:36px;height:5px;background:rgba(0,0,0,0.6);border-radius:3px;margin-top:2px;overflow:hidden;}
+.sprite .hpbar i{display:block;height:100%;background:#7fd17f;}
+.sprite.preview{opacity:0.85;pointer-events:auto;cursor:grab;}
+.sprite.own{pointer-events:auto;cursor:grab;}
+.sprite.enemy{pointer-events:auto;cursor:default;}
+.sprite.boom .ic{font-size:40px;filter:drop-shadow(0 0 12px #ff8040);animation:boomPop 0.5s ease-out;}
+@keyframes boomPop{0%{transform:scale(0.3);opacity:0.4;}60%{transform:scale(1.3);opacity:1;}100%{transform:scale(1);opacity:1;}}
+/* Hit-flash: an enemy that just got hit by an Ambush tower — flashes red + shakes slightly in place,
+   does NOT change icon (unlike .boom, since the enemy is still alive and keeps moving/fighting normally,
+   this is just a flash of feedback for taking a hit). */
+.sprite.hitFlash .ic{animation:hitFlashPop 0.35s ease-out;}
+@keyframes hitFlashPop{
+  0%{filter:drop-shadow(0 0 10px #ff3b30) brightness(2.2);transform:scale(1.25) translateX(0);}
+  30%{transform:scale(1.1) translateX(-3px);}
+  60%{transform:scale(1.1) translateX(3px);}
+  100%{filter:drop-shadow(0 2px 2px #000) brightness(1);transform:scale(1) translateX(0);}
+}
+/* COUNTER RING (Level2): 2 hit-flash variants replacing the default red, so you can tell who's winning
+   at a glance — no need to read HP numbers or check a table. .counterHit (overrides .hitFlash, higher
+   specificity wins): a bright YELLOW flash + a big scale-up = "just took a CRITICAL hit from its exact
+   counter". .resistHit: a dim GRAY flash + a slight pull-back = "just RESISTED a weak hit, almost harmless".
+   Shared by both enemy sprites AND our own ship sprites. */
+.sprite.hitFlash.counterHit .ic{animation:counterHitPop 0.4s ease-out;}
+@keyframes counterHitPop{
+  0%{filter:drop-shadow(0 0 16px #ffd54a) brightness(2.8) saturate(1.5);transform:scale(1.5) translateX(0);}
+  35%{transform:scale(1.2) translateX(-4px);}
+  65%{transform:scale(1.2) translateX(4px);}
+  100%{filter:drop-shadow(0 2px 2px #000) brightness(1);transform:scale(1) translateX(0);}
+}
+.sprite.hitFlash.resistHit .ic{animation:resistHitPop 0.4s ease-out;}
+@keyframes resistHitPop{
+  0%{filter:grayscale(0.85) brightness(0.65);transform:scale(0.88) translateY(-3px);}
+  50%{filter:grayscale(0.85) brightness(0.65);transform:scale(0.92) translateY(-1px);}
+  100%{filter:drop-shadow(0 2px 2px #000) brightness(1);transform:scale(1) translateY(0);}
+}
+.sprite.own:hover .ic{filter:drop-shadow(0 0 6px #8ee0ff);}
+.sprite.own.selected .ic{filter:drop-shadow(0 0 8px #f0e64e);}
+.sprite.own.upgraded .ic{outline:2px solid var(--brass-light);outline-offset:3px;border-radius:50%;
+  box-shadow:0 0 5px rgba(240,198,116,0.85);}
+/* hover tooltip for our own ships — only shows full stats on hover, not permanently pinned to the map */
+.sprite .shipTip{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);width:150px;
+  background:rgba(15,10,4,0.97);border:2px solid var(--brass);border-radius:7px;padding:6px;font-size:10px;
+  z-index:60;display:none;text-align:left;pointer-events:none;}
+.sprite.own:hover .shipTip{display:block;}
+.sprite.enemy:hover .shipTip{display:block;}
+.shipTip .row{display:flex;justify-content:space-between;padding:1px 0;}
+.buyPopup{position:absolute;top:-34px;left:50%;transform:translateX(-50%);display:flex;gap:4px;pointer-events:auto;z-index:30;white-space:nowrap;}
+.buyPopup button{font-size:10.5px;font-weight:bold;border-radius:5px;padding:3px 8px;cursor:pointer;border:2px solid var(--brass);}
+.buyPopup .buyBtn{background:linear-gradient(180deg,#3d7b3d,#245024);color:#fff;}
+.buyPopup .cancelBtn{background:linear-gradient(180deg,#7a3a3a,#4a1f1f);color:#fff;}
+/* RIGHT SHIPYARD */
+#shipyard{width:270px;background:rgba(0,0,0,0.25);border:2px solid var(--brass);border-radius:8px;padding:10px;}
+#shipyard h3{margin:0 0 8px;color:var(--brass-light);font-size:13px;text-transform:uppercase;}
+.shipCard{display:flex;align-items:center;gap:8px;background:rgba(0,0,0,0.3);border:2px solid rgba(212,175,55,0.4);
+  border-radius:8px;padding:8px;margin-bottom:8px;cursor:grab;position:relative;}
+.shipCard.locked{opacity:0.35;cursor:not-allowed;}
+.shipCard.unaffordable{opacity:0.5;cursor:not-allowed;}
+.shipCard .sic{font-size:26px;width:30px;text-align:center;}
+.shipCard .sname{font-weight:bold;font-size:12.5px;color:var(--brass-light);}
+.shipCard .scost{font-size:11px;color:#c9b98a;}
+/* default (used for .shipCard in the Shipyard — positioned on the RIGHT of the screen) -> tooltip opens
+   to the LEFT so it doesn't spill past the right edge of the screen. */
+.tooltip{position:absolute;right:105%;left:auto;top:0;width:190px;background:rgba(15,10,4,0.97);border:2px solid var(--brass);
+  border-radius:8px;padding:8px;font-size:10.5px;z-index:50;display:none;}
+.shipCard:hover .tooltip{display:block;}
+.enemyRow:hover .tooltip{display:block;}
+.tooltip .row{display:flex;justify-content:space-between;padding:1px 0;}
+.tooltip .row b.upgraded{color:#f0e64e;}
+/* CAPTION / TUTORIAL — a popup floating over the screen (position:fixed), NOT part of the layout flow,
+   so it never pushes the map/shipyard down when the text length changes. Placed at the BOTTOM of the
+   screen (not the top) so it never covers the Start Battle/Buy/Upgrade buttons — those buttons all live
+   in the topbar+grid+shipyard area up TOP, far away from here. */
+#caption{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);max-width:640px;width:90%;
+  background:rgba(20,12,6,0.97);border:3px solid var(--brass-light);
+  border-radius:12px;padding:12px 22px;font-size:15px;text-align:center;line-height:1.6;display:none;
+  box-shadow:0 4px 24px rgba(0,0,0,0.5),0 0 0 4px rgba(240,198,116,0.15);animation:captionGlow 1.6s ease-in-out infinite;
+  z-index:300;}
+#caption.show{display:block;}
+#caption b{color:var(--brass-light);}
+@keyframes captionGlow{0%,100%{box-shadow:0 0 0 4px rgba(240,198,116,0.12);}50%{box-shadow:0 0 0 8px rgba(240,198,116,0.28);}}
+/* End-of-level popup (win/lose) — replaces the old static banner, has a button to advance to the next level if there is one. */
+.endOverlay{position:fixed;inset:0;background:rgba(0,0,0,0.68);display:none;align-items:center;justify-content:center;z-index:200;}
+.endOverlay.open{display:flex;}
+.endBox{background:linear-gradient(180deg,#2a2015,#180f06);border:2px solid var(--brass-light);border-radius:12px;
+  padding:26px 34px;text-align:center;max-width:440px;box-shadow:0 8px 40px rgba(0,0,0,0.6);}
+.endTitle{font-size:21px;font-weight:bold;color:var(--brass-light);margin-bottom:10px;}
+.endMsg{font-size:13px;color:#e8dcc0;line-height:1.55;margin-bottom:18px;}
+.endActions{display:flex;gap:10px;justify-content:center;}
+.endActions button{background:linear-gradient(180deg,#a3402f,#6a2020);border:2px solid var(--brass-light);color:#fff;
+  font-weight:bold;padding:8px 16px;border-radius:8px;cursor:pointer;font-size:12.5px;}
+.endActions button:hover{filter:brightness(1.15);}
+#replayLevelBtn{background:linear-gradient(180deg,#5a4a3a,#3a2e22);}
+
+/* ===================== NEW CSS FOR THE REDESIGN ===================== */
+/* Level 2 ice tile — slows by 1 step */
+.cell.iceCell{background:rgba(120,200,255,0.30);}
+.cell.iceCell::after{content:'🧊';font-size:calc(var(--cell,72px) * 0.34);}
+
+/* Highlight for the ROUTE THE ENEMY WILL TAKE — only paints the path the enemy has ACTUALLY decided to take (per spec) */
+.cell.routeChosen{background:rgba(224,120,90,0.22);box-shadow:inset 0 0 0 2px rgba(224,120,90,0.55);}
+/* A valid route the enemy did NOT choose — noticeably dimmer so it's not confused with the active route */
+.cell.routeIdle{box-shadow:inset 0 0 0 1px rgba(255,255,255,0.13);}
+
+/* The "Threat = N" label sits at the CENTER of a lane with a Threat tower — dim but still legible (per spec).
+   Anchored at the middle of that lane with a dark background so it doesn't blend with other lanes' labels. */
+.routeThreatLabel{position:absolute;pointer-events:none;z-index:22;text-align:center;
+  font-size:13px;font-weight:bold;color:#ffc9a0;opacity:0.62;letter-spacing:0.5px;
+  background:rgba(10,6,2,0.55);border:1px solid rgba(224,120,90,0.45);border-radius:6px;
+  padding:2px 8px;white-space:nowrap;text-shadow:0 1px 3px #000;transform:translate(-50%,-50%);}
+
+/* Icon + arrow announcing the upcoming wave, placed around the Enemy Den icon (per spec) */
+.denWaveHint{position:absolute;pointer-events:none;z-index:24;display:flex;align-items:center;gap:3px;
+  background:rgba(10,6,2,0.72);border:1px solid rgba(212,175,55,0.55);border-radius:7px;padding:2px 6px;
+  font-size:12px;white-space:nowrap;color:#ffd9a0;font-weight:bold;}
+.denWaveHint .arw{font-size:14px;}
+.denWaveHint .cnt{font-size:10px;opacity:0.85;}
+.denWaveHint.rerouted{border-color:#ffd54a;box-shadow:0 0 0 2px rgba(255,213,74,0.35);}
+.denWaveHint .warn{color:#ffd54a;font-size:13px;animation:attnPulseAnim 1s infinite;}
+
+/* Direction-picker arrow for DPS while previewing (rotates with the mouse cursor, click to lock it in) */
+.dirPick{position:absolute;z-index:40;font-size:calc(var(--cell,72px) * 0.30);pointer-events:none;
+  text-shadow:0 0 6px #000;color:#8ee0ff;filter:drop-shadow(0 0 5px #8ee0ff);}
+.dirLocked{position:absolute;z-index:26;font-size:calc(var(--cell,72px) * 0.22);pointer-events:none;
+  color:#ffd9a0;text-shadow:0 0 4px #000;}
+/* The "1 cell ahead" that DPS will shoot — shown during preview so the player can clearly see the chosen direction */
+.cell.dpsAimCell{box-shadow:inset 0 0 0 3px rgba(255,120,90,0.95);border-radius:4px;
+  background:rgba(255,120,90,0.18);}
+
+/* Count of enemies currently STACKED in 1 cell (max 3 blocked at once) */
+.stackBadge{position:absolute;top:2px;right:4px;font-size:10px;font-weight:bold;color:#fff;
+  background:rgba(190,60,50,0.92);border-radius:8px;padding:0 5px;z-index:30;text-shadow:0 1px 2px #000;}
+
+/* Run-1-step button (split out from the Start Battle button per spec) */
+#stepOnceBtn{background:linear-gradient(180deg,#3d6b7b,#204450);border:2px solid var(--brass);
+  color:#fff;font-weight:bold;padding:7px 12px;border-radius:8px;cursor:pointer;font-size:12px;}
+#stepOnceBtn:hover:not(:disabled){filter:brightness(1.15);}
+#stepOnceBtn:disabled{opacity:0.35;cursor:not-allowed;}
+
+.waveGroupTitle{font-size:11px;font-weight:bold;color:var(--brass-light);margin:7px 0 4px;
+  border-bottom:1px solid rgba(212,175,55,0.3);padding-bottom:2px;}
+.waveSideTitle{font-size:10.5px;font-weight:bold;color:#ffc9a0;margin:6px 0 3px;}
+
+/* Sell-ship button */
+#sellBtn{width:100%;padding:7px;margin-top:5px;font-size:11.5px;border-radius:7px;font-weight:bold;cursor:pointer;
+  background:linear-gradient(180deg,#7a4a2a,#4a2a14);border:2px solid var(--brass);color:#ffd9a0;}
+#sellBtn:hover{filter:brightness(1.15);}
+
+/* "Click again to lock in the direction" hint floating right ABOVE the ship icon while aiming */
+.dirHint{position:absolute;bottom:100%;left:50%;transform:translateX(-50%);margin-bottom:2px;
+  background:rgba(10,6,2,0.92);border:2px solid #8ee0ff;border-radius:6px;padding:2px 7px;
+  font-size:10.5px;font-weight:bold;color:#8ee0ff;white-space:nowrap;z-index:45;
+  animation:dirHintPulse 1s ease-in-out infinite;}
+@keyframes dirHintPulse{0%,100%{box-shadow:0 0 0 0 rgba(142,224,255,0.6);}50%{box-shadow:0 0 0 6px rgba(142,224,255,0);}}
+
+/* The Range tower's range must stay VISIBLE even when that cell is painted as an enemy route — uses
+   outline (drawn outside the cell border, not overridden by .routeChosen's background/box-shadow) plus a
+   light-blue overlay background. */
+.cell.rangePreview{outline:3px solid rgba(142,224,255,0.95);outline-offset:-3px;border-radius:4px;
+  background-image:linear-gradient(rgba(142,224,255,0.22),rgba(142,224,255,0.22));}
+.cell.dpsAimCell{outline:3px solid rgba(255,120,90,0.98);outline-offset:-3px;border-radius:4px;
+  background-image:linear-gradient(rgba(255,120,90,0.28),rgba(255,120,90,0.28));}
+
+/* Cell the tutorial is pointing the player to place a ship on */
+.cell.tutorialSlot{outline:4px dashed #f0e64e;outline-offset:-4px;border-radius:4px;
+  animation:tutSlot 1s infinite;}
+@keyframes tutSlot{0%,100%{background-color:rgba(240,230,78,0.16);}50%{background-color:rgba(240,230,78,0.38);}}
+
+/* Attention-grabbing pulse for the Threat label / wave panel / Threat ship icon on the map */
+.attnPulse{animation:attnPulseAnim 1s ease-in-out infinite;}
+@keyframes attnPulseAnim{0%,100%{box-shadow:0 0 0 0 rgba(240,230,78,0.75);}50%{box-shadow:0 0 0 10px rgba(240,230,78,0);}}
+#wavePanel.attnPulse{outline:3px solid #f0e64e;outline-offset:2px;border-radius:8px;}
+.sprite.own.attnShip .ic{filter:drop-shadow(0 0 10px #f0e64e) brightness(1.3);animation:attnPulseAnim 1s infinite;}
+
+/* Threat label spanning multiple cells */
+.routeThreatLabel{overflow:hidden;text-overflow:ellipsis;}
+
+/* Whirlpool tile (Level 4) */
+.cell.swirlCell::after{content:'🌀';font-size:calc(var(--cell,72px) * 0.36);opacity:0.8;
+  animation:swirlSpin 3s linear infinite;}
+@keyframes swirlSpin{from{transform:rotate(0deg);}to{transform:rotate(360deg);}}
+.cell.swirlCell.armed{background:rgba(224,70,60,0.32);}
+.cell.swirlCell.armed::after{opacity:1;filter:drop-shadow(0 0 8px #ff3b3b);}
+.routeThreatLabel.swirlLabel{color:#ff9a9a;border-color:rgba(224,70,60,0.7);}
+.swirlCountTag{position:absolute;width:calc(var(--cell,72px) * 1.6);margin-left:calc(var(--cell,72px) * -0.3);
+  text-align:center;font-size:10.5px;font-weight:bold;color:#ffd8d2;text-shadow:0 1px 3px #000;
+  pointer-events:none;z-index:26;background:rgba(10,6,2,0.72);border-radius:5px;padding:1px 0;}
+.swirlCountTag.ready{color:#9ad17f;}
+
+#balanceBtn,#balanceDlBtn{background:linear-gradient(180deg,#4a5a3a,#2a3420);border:2px solid var(--brass);
+  color:#e8dcc0;font-weight:bold;padding:7px 10px;border-radius:8px;cursor:pointer;font-size:12px;}
+#balanceBtn:hover,#balanceDlBtn:hover{filter:brightness(1.2);}
+#balanceDlBtn{padding:7px 8px;}
+#balanceToast{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-24px);
+  background:rgba(20,40,20,0.97);border:2px solid #9ad17f;color:#dff5d0;border-radius:9px;
+  padding:9px 18px;font-size:13px;font-weight:bold;z-index:500;opacity:0;pointer-events:none;
+  transition:opacity .25s, transform .25s;}
+#balanceToast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#balanceToast.bad{background:rgba(60,20,16,0.97);border-color:#d1594e;color:#ffd8d2;}
+
+/* Dashed lines tracing the ENTIRE network of routes the enemy could take — static, dim, does NOT change
+   with Threat. (Different from the orange .routeChosen highlight, which is the route the enemy is
+   ACTUALLY taking right now.) */
+#routeNetSvg{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;}
+
+</style>
+</head>
+<body>
+<div id="app">
+  <div class="topbar">
+    <div class="title" id="gameTitle">⚓ Naval TD — Level 1 (Prototype)</div>
+    <div class="levelTabs">
+      <button class="levelTab" data-level="man1">Level 1</button>
+      <button class="levelTab" data-level="man2">Level 2</button>
+      <button class="levelTab" data-level="man3">Level 3</button>
+      <button class="levelTab" data-level="man4">Level 4</button>
+      <button class="levelTab" data-level="man5">Level 5</button>
+    </div>
+    <div class="chip">💰 <span id="goldVal">0</span></div>
+    <div class="chip">🚢 Flagship <span id="fortHpVal">100</span>/100</div>
+    <div class="chip" id="phaseChip">🛠 Preparing</div>
+    <button id="startBattleBtn" title="During battle, click to Pause/Resume">⚔ Start Battle</button>
+    <button id="stepOnceBtn" title="Run exactly 1 step then stop">⏭ Run 1 Step</button>
+    <button id="balanceBtn" title="Pick a balance data file (.csv) — edit & save the file and the game updates instantly">📊 Balance Data</button>
+    <button id="balanceDlBtn" title="Download a sample balance data file">⬇</button>
+    <div class="speedCtrl">
+      <button class="speedBtn" data-speed="1">x1</button>
+      <button class="speedBtn" data-speed="2">x2</button>
+      <button class="speedBtn" data-speed="4">x4</button>
+    </div>
+  </div>
+  <div id="caption"></div>
+  <div class="main">
+    <div id="wavePanel">
+      <h3>📖 Recon</h3>
+      <div id="waveCounter">Wave 1/3</div>
+      <button id="waveToggleBtn">View All Waves ▾</button>
+      <div id="waveList"></div>
+    </div>
+    <div id="gridWrap">
+      <div id="decorLayer">
+        <span style="left:22px;top:18px;">🏝️</span>
+        <span style="left:64px;top:490px;">🏝️</span>
+        <span style="left:436px;top:16px;">☁️</span>
+        <span style="left:250px;top:522px;">🏝️</span>
+        <span style="left:844px;top:34px;">🏝️</span>
+        <span style="left:862px;top:500px;">🏝️</span>
+        <span style="left:846px;top:250px;">☁️</span>
+        <span style="left:26px;top:280px;">🏝️</span>
+        <span style="left:456px;top:548px;">🏝️</span>
+        <span style="left:150px;top:52px;">☁️</span>
+        <span style="left:672px;top:495px;">☁️</span>
+      </div>
+      <svg id="laneSvg"></svg>
+      <div id="grid"></div>
+    </div>
+    <div id="shipyard">
+      <h3>⚒ Shipyard</h3>
+      <div id="shipList"></div>
+      <div id="selectedBox">
+        <div class="selTitle" id="selTitle"></div>
+        <div id="selStatRows"></div>
+        <button id="upgradeBtn"></button>
+        <button id="sellBtn"></button>
+      </div>
+    </div>
+  </div>
+  <div id="endOverlay" class="endOverlay">
+    <div class="endBox">
+      <div id="endTitle" class="endTitle"></div>
+      <div id="endMsg" class="endMsg"></div>
+      <div class="endActions">
+        <button id="nextLevelBtn" style="display:none;">Next Level →</button>
+        <button id="replayLevelBtn">Replay This Level</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+(function(){
+"use strict";
+/* =====================================================================
+   NAVAL TD — REDESIGN following the "Read this document carefully before writing any code" spec doc.
+   3 levels share 1 file, selected via location.hash (#man1/#man2/#man3).
+   Data: see So_Lieu_Can_Bang_v2.md — editing numbers there is enough, no need to touch the logic.
+===================================================================== */
+const ACTIVE_LEVEL = ['man2','man3','man4','man5'].includes((location.hash||'').slice(1)) ? location.hash.slice(1) : 'man1';
+
+let MAX_STACK = 3;   // max 3 enemies STACKED in the same cell when blocked by a tower (per spec)
+let STEP_MS   = 900; // 1 step at x1 speed — much slower than the old build (500) so you can actually watch each step
+
+/* ---------- route-building helpers ---------- */
+function rowRoute(row, cFrom, cTo){
+  const p=[]; const st = cTo>=cFrom?1:-1;
+  for(let c=cFrom;;c+=st){ p.push({r:row,c}); if(c===cTo) break; }
+  return p;
+}
+function colRoute(col, rFrom, rTo){
+  const p=[]; const st = rTo>=rFrom?1:-1;
+  for(let r=rFrom;;r+=st){ p.push({r,c:col}); if(r===rTo) break; }
+  return p;
+}
+function joinRoute(...segs){
+  let out = segs[0].slice();
+  for(let i=1;i<segs.length;i++){
+    const s = segs[i], last = out[out.length-1];
+    out = out.concat((s[0].r===last.r && s[0].c===last.c) ? s.slice(1) : s);
+  }
+  return out;
+}
+
+/* =====================================================================
+   TOWER (ships) — 3 types per spec. NO MORE fuel, NO MORE multiply/divide counter modifiers:
+   combat is flat ATK subtracted from HP; the difference lies in RANGE / TARGET COUNT / DIRECTION.
+===================================================================== */
+const TOWER_DEFS = {
+  // ===== ANCHOR BASELINE: 40 gold -> 40 damage/step. i.e. "1 gold = 1 damage". =====
+  // Everything else is priced against this baseline, so players can do the math in their head, no need to calculate closely.
+  dps: {
+    name:'DPS', icon:'⚔️', cost:40,
+    hp:[160,160], atk:[40,40],      // NO upgrade anymore -> the anchor baseline stays true all game
+    shape:'dir1',                   // exactly 1 cell in the locked-in direction
+    ring:[1,1],
+    maxTargets:1,                   // only hits the 1 enemy "at the front"
+    blocks:true,
+    needsDir:true,
+    desc:'40 gold = 40 damage/step to 1 target. Blocks up to 3 enemies. Counters the Tanker (exactly 8 hits).',
+  },
+  range: {
+    name:'Range', icon:'🏹', cost:55,
+    hp:[80,80], atk:[20,20],        // NO upgrade
+    shape:'around',
+    ring:[1,1],                     // always the 8 surrounding cells
+    maxTargets:3,                   // hits up to 3 enemies at once
+    blocks:true,
+    needsDir:false,
+    desc:'20 damage to UP TO 3 enemies at once, 8 surrounding cells. Only profitable if it hits all 3 (1.09 dmg/gold); hitting 1-2 is a heavy LOSS. Loses to the Tanker.',
+  },
+  threat: {
+    name:'Threat', icon:'🪤', cost:35,
+    hp:[150,150], atk:[0,0],
+    shape:'none', ring:[0,0], maxTargets:0,
+    blocks:true,                    // NOW BLOCKS the path — enemies can no longer walk through it
+    needsDir:false,
+    threatUpgradeCost:[50,100],     // lvl1->2, lvl2->3 — the ONLY thing that still has upgrades in this game
+    desc:"Doesn't attack but BLOCKS the path and has a huge HP pool — on a lane with no other defense, it IS the wall. Changes that lane's Threat: Lv1 scares off Normals, Lv2 also scares off Tankers, Lv3 also scares off Jammers. Multiple towers on the same lane do NOT stack — you have to upgrade instead.",
+  },
+};
+// Selling a ship: refunds a % of the TOTAL gold sunk into it (purchase price + upgrade cost).
+// Kept LOW (30%) on purpose: refund too much and "sell the one about to die, buy a fresh one" becomes
+// a cheap heal button, and losing a tower stops meaning anything. 30% makes every lost tower a real loss.
+let SELL_REFUND = 0.3;
+
+/* ---- current stats of a ship (whether upgraded or not) ---- */
+function tHp(kind, up){ return TOWER_DEFS[kind].hp[up?1:0]; }
+function tAtk(kind, up){ return TOWER_DEFS[kind].atk[up?1:0]; }
+function tRing(kind, up){ return TOWER_DEFS[kind].ring[up?1:0]; }
+
+/* =====================================================================
+   ENEMIES — Alert Level is a FIXED RANK by type (1/2/3), compared directly against a lane's Threat LEVEL.
+===================================================================== */
+const ENEMY_DEFS = {
+  normal: { name:'Normal',   icon:'🚤', hp:80,  atk:24, wariness:1 },  // = 2 DPS hits, 4 Range hits. High ATK so it can ACTUALLY punish a DPS once it arrives
+  tank:   { name:'Tanker',   icon:'🚢', hp:240, atk:10, wariness:2 },  // = EXACTLY 6 DPS hits; Range needs 12 hits -> killable if you stack coverage
+  jammer: { name:'Jammer',   icon:'📡', hp:120, atk:12, wariness:3, zerosRouteThreat:true }, // = 3 DPS hits; tanky enough to survive long enough to matter
+  // Boss: defined per spec but NOT USED in Levels 1-3 (saved for Level 5 as required).
+  boss:   { name:'Boss',     icon:'💀', hp:900, atk:30, wariness:Infinity, slowFactor:2, instantLose:true, swirlImmune:true },
+};
+/* =====================================================================
+   MAP as a CHARACTER GRID — maps 1:1 against the drawing in the spec doc.
+     D = Enemy Den       P = Flagship
+     X = island (can't place ships, enemies can't walk through)
+     O = open water: CAN place ships but is NOT an enemy route
+     R = enemy route cell, ships CAN be placed (an anchorage — the only place you can build a wall)
+     r = enemy route cell, ships CANNOT be placed (deep sea) — used to narrow down buildable spots
+     I = ice tile (part of the enemy route, walking onto it slows by 1 step)
+     S = whirlpool (part of the enemy route)
+===================================================================== */
+function parseGrid(rows){
+  const g = rows.map(s=>s.split(''));
+  const info = { rows:g.length, cols:g[0].length, islands:[], routeCells:[], noBuild:[],
+                 den:null, fortress:null, iceTile:null, iceTiles:[], swirl:null };
+  for(let r=1;r<=info.rows;r++) for(let c=1;c<=info.cols;c++){
+    const ch = g[r-1][c-1];
+    if(ch==='X'){ info.islands.push({r,c}); continue; }
+    if(ch==='O') continue;
+    info.routeCells.push({r,c});
+    // 'r' = deep sea; 'S'/'I' = whirlpool/ice tile (building on top disables their mechanic)
+    if(ch==='r' || ch==='S' || ch==='I') info.noBuild.push({r,c});
+    if(ch==='D') info.den={r,c};
+    else if(ch==='P') info.fortress={r,c};
+    else if(ch==='I'){ info.iceTiles.push({r,c}); if(!info.iceTile) info.iceTile={r,c}; }
+    else if(ch==='S') info.swirl={r,c};
+  }
+  return info;
+}
+
+const CFG_MAN1 = Object.assign(parseGrid([
+  'OOOOOOOOO',
+  'DRRRRRRRP',
+]), {
+  label:'Level 1 — Tutorial',
+  defaultPaths:{ bottom: rowRoute(2,1,9) },
+  // ENEMY ROUTE ALLOWED (only exactly these segments, no auto-joining of adjacent cells at random)
+  segments:[ rowRoute(2,1,9) ],
+  sides:['bottom'],
+  sideLabel:{ bottom:'Path' },
+  unlockedTowers:['dps','range'],
+  startGold:40, waveClearBonus:[70,80], killGold:5,
+  waves:[
+    { label:'Wave 1/2 — First Tanker', spawns:[ {kind:'tank',time:1,side:'bottom'} ] },
+    // Wave 2 is JUST a cluster of 3 Normals — its own lesson for Range (Tanker was already taught in Wave 1 via DPS)
+    { label:'Wave 2/2 — Normal Cluster', spawns:[
+        {kind:'normal',time:1,side:'bottom'},{kind:'normal',time:2,side:'bottom'},{kind:'normal',time:3,side:'bottom'} ] },
+  ],
+});
+
+const CFG_MAN2 = Object.assign(parseGrid([
+  'RRRRIRRRR',
+  'DRRRRRRRP',
+]), {
+  label:'Level 2 — Threat',
+  defaultPaths:{
+    bottom: rowRoute(2,1,9),
+    top:    joinRoute(colRoute(1,2,1), rowRoute(1,1,9), colRoute(9,1,2)),
+  },
+  // The 2 paths ONLY connect at the 2 ends (the Den side and the Flagship side) — there's NO shortcut
+  // jumping vertically between the two rows in the middle, so enemies can't cut across to skip the ice tile.
+  segments:[
+    rowRoute(2,1,9),
+    joinRoute(colRoute(1,2,1), rowRoute(1,1,9), colRoute(9,1,2)),
+  ],
+  sides:['top','bottom'],
+  sideLabel:{ top:'Top Lane', bottom:'Bottom Lane' },
+  unlockedTowers:['dps','range','threat'],
+  startGold:110, waveClearBonus:[75,85,95], killGold:5,
+  waves:[
+    // DIFFICULTY LEVER = NUMBER OF TANKERS (not the number of Normals — 2 Range towers side by side can clean up any number of Normals).
+    // Every Tanker on a lane forces the player into a DPS(block) + Range(clean up escorts) pair costing ~90 gold.
+    { label:'Wave 1/3 — Opening Tanker', spawns:[
+        {kind:'tank',time:1,side:'bottom'},{kind:'normal',time:4,side:'bottom'},{kind:'normal',time:5,side:'bottom'} ] },
+    { label:'Wave 2/3 — Two Tankers', spawns:[
+        {kind:'tank',time:1,side:'bottom'},{kind:'tank',time:5,side:'bottom'},
+        {kind:'normal',time:8,side:'bottom'},{kind:'normal',time:9,side:'bottom'} ] },
+    { label:'Wave 3/3 — Three Tankers', spawns:[
+        {kind:'tank',time:1,side:'bottom'},{kind:'tank',time:5,side:'bottom'},{kind:'tank',time:9,side:'bottom'},
+        {kind:'normal',time:12,side:'bottom'},{kind:'normal',time:13,side:'bottom'} ] },
+  ],
+});
+
+const CFG_MAN3 = Object.assign(parseGrid([
+  'RRRRRRRRP',
+  'ROOOROOOR',
+  'DXXXRXXXR',
+  'RXXXRXXXR',
+  'RXXXRXXXR',
+  'RRRIRRRRR',
+]), {
+  label:'Level 3 — Two-Front Assault',
+  defaultPaths:{
+    top:    joinRoute(colRoute(1,3,1), rowRoute(1,1,9)),
+    bottom: joinRoute(colRoute(1,3,6), rowRoute(6,1,9), colRoute(9,6,1)),
+  },
+  // top lane, bottom lane, and EXACTLY 1 vertical link on column 5 — no zigzagging 4th/5th path
+  segments:[
+    joinRoute(colRoute(1,3,1), rowRoute(1,1,9)),
+    joinRoute(colRoute(1,3,6), rowRoute(6,1,9), colRoute(9,6,1)),
+    colRoute(5,1,6),
+  ],
+  sides:['top','bottom'],
+  sideLabel:{ top:'Top Lane', bottom:'Bottom Lane' },
+  unlockedTowers:['dps','range','threat'],
+  startGold:150, waveClearBonus:[85,100,115], killGold:5,
+  waves:[
+    { label:'Wave 1/3', spawns:[
+        {kind:'tank',time:1,side:'top'},{kind:'normal',time:5,side:'top'},
+        {kind:'normal',time:1,side:'bottom'},{kind:'normal',time:4,side:'bottom'},{kind:'normal',time:5,side:'bottom'},{kind:'normal',time:8,side:'bottom'} ] },
+    { label:'Wave 2/3', spawns:[
+        {kind:'tank',time:1,side:'top'},{kind:'tank',time:5,side:'top'},{kind:'normal',time:8,side:'top'},{kind:'normal',time:9,side:'top'},
+        {kind:'tank',time:1,side:'bottom'},{kind:'normal',time:4,side:'bottom'},{kind:'normal',time:5,side:'bottom'},{kind:'normal',time:8,side:'bottom'},{kind:'normal',time:9,side:'bottom'} ] },
+    { label:'Wave 3/3', spawns:[
+        {kind:'tank',time:1,side:'top'},{kind:'tank',time:6,side:'top'},{kind:'normal',time:9,side:'top'},{kind:'normal',time:10,side:'top'},
+        {kind:'tank',time:1,side:'bottom'},{kind:'tank',time:5,side:'bottom'},{kind:'normal',time:8,side:'bottom'},{kind:'normal',time:9,side:'bottom'},
+        {kind:'normal',time:12,side:'bottom'},{kind:'jammer',time:13,side:'bottom'} ] },
+  ],
+});
+
+/* LEVEL 4 — Whirlpool. The bottom lane by default runs through the whirlpool tile; once it's armed there's
+   still a DETOUR looping further down (threat 0) so enemies detour down there instead of jumping to the top lane. */
+const CFG_MAN4 = Object.assign(parseGrid([
+  'RRRRRRRP',
+  'RXSRRRRR',
+  'RXRXXOOR',
+  'DRRXXRRR',
+  'XXRXXROO',
+  'XXRXXROX',
+  'XXRRIROX',
+]), {
+  label:'Level 4 — Whirlpool',
+  defaultPaths:{
+    top:    joinRoute(colRoute(1,4,1), rowRoute(1,1,8)),
+    bottom: [ {r:4,c:1},{r:4,c:2},{r:4,c:3},{r:3,c:3},{r:2,c:3},
+              {r:2,c:4},{r:2,c:5},{r:2,c:6},{r:2,c:7},{r:2,c:8},{r:1,c:8} ],
+  },
+  // A = top lane, B = bottom lane (through the whirlpool), C = the detour looping down and rejoining at 2:8
+  segments:[
+    joinRoute(colRoute(1,4,1), rowRoute(1,1,8)),
+    [ {r:4,c:1},{r:4,c:2},{r:4,c:3},{r:3,c:3},{r:2,c:3},
+      {r:2,c:4},{r:2,c:5},{r:2,c:6},{r:2,c:7},{r:2,c:8},{r:1,c:8} ],
+    [ {r:4,c:3},{r:5,c:3},{r:6,c:3},{r:7,c:3},{r:7,c:4},{r:7,c:5},{r:7,c:6},
+      {r:6,c:6},{r:5,c:6},{r:4,c:6},{r:4,c:7},{r:4,c:8},{r:3,c:8},{r:2,c:8} ],
+  ],
+  sides:['top','bottom'],
+  sideLabel:{ top:'Top Lane', bottom:'Bottom Lane' },
+  swirlCycleSteps:5,   // stays off for 5 steps after eating something, then re-arms itself
+  swirlThreat:10,
+  unlockedTowers:['dps','range','threat'],
+  startGold:160, waveClearBonus:[85,100,115], killGold:5,
+  waves:[
+    { label:'Wave 1/3', spawns:[
+        {kind:'tank',time:1,side:'top'},{kind:'normal',time:5,side:'top'},
+        {kind:'normal',time:1,side:'bottom'},{kind:'normal',time:4,side:'bottom'},{kind:'normal',time:6,side:'bottom'},{kind:'normal',time:8,side:'bottom'} ] },
+    { label:'Wave 2/3', spawns:[
+        {kind:'tank',time:1,side:'top'},{kind:'tank',time:6,side:'top'},{kind:'normal',time:9,side:'top'},{kind:'normal',time:10,side:'top'},
+        {kind:'tank',time:1,side:'bottom'},{kind:'normal',time:5,side:'bottom'},{kind:'normal',time:6,side:'bottom'},{kind:'normal',time:9,side:'bottom'},{kind:'normal',time:11,side:'bottom'} ] },
+    { label:'Wave 3/3', spawns:[
+        {kind:'tank',time:1,side:'top'},{kind:'tank',time:6,side:'top'},{kind:'normal',time:9,side:'top'},{kind:'normal',time:10,side:'top'},
+        {kind:'tank',time:1,side:'bottom'},{kind:'tank',time:5,side:'bottom'},{kind:'normal',time:8,side:'bottom'},{kind:'normal',time:9,side:'bottom'},
+        {kind:'normal',time:12,side:'bottom'},{kind:'jammer',time:13,side:'bottom'} ] },
+  ],
+});
+
+/* ===================== LEVEL 5 — DEATH'S DOOR (Boss) =====================
+   3 lanes, but only 2 "pockets" for placing ships (row 2 and row 4). Each pocket only reaches 2 of the 3 lanes;
+   the MIDDLE LANE is the ONLY lane both pockets can reach. The Boss is immune to Threat so it ALWAYS takes the
+   middle lane -> the spot where you fight the Boss is fixed in advance, and the player has to mass enough
+   firepower there without leaving the other two sides open. */
+const CFG_MAN5 = Object.assign(parseGrid([
+  'RRRRRRRRP',
+  'ROOOOOOOR',   // safe pocket — reaches the TOP LANE and the MIDDLE LANE
+  'DRRRSRRRR',
+  'RXXXOXXXR',   // the bottom flank has only 1 rescue cell (4:5)
+  'RRRIRIRIR',   // BOTTOM LANE — long, 3 ice tiles, almost impossible to defend
+]), {
+  label:'Level 5 — Death\'s Door',
+  defaultPaths:{
+    top:    joinRoute(colRoute(1,3,1), rowRoute(1,1,9)),          // 11 cells
+    mid:    joinRoute(rowRoute(3,1,9), colRoute(9,3,1)),          // 11 cells — the Boss's lane
+    bottom: joinRoute(colRoute(1,3,5), rowRoute(5,1,9), colRoute(9,5,1)), // 15 cells
+  },
+  segments:[
+    joinRoute(colRoute(1,3,1), rowRoute(1,1,9)),
+    joinRoute(rowRoute(3,1,9), colRoute(9,3,1)),
+    joinRoute(colRoute(1,3,5), rowRoute(5,1,9), colRoute(9,5,1)),
+  ],
+  sides:['top','mid','bottom'],
+  sideLabel:{ top:'Top Lane', mid:'Mid Lane', bottom:'Bottom Lane' },
+  swirlCycleSteps:5,
+  // Threat while the whirlpool is DISCHARGING is kept LOW (1): just enough to scare off a Normal
+  // (alert level 1) into dodging right after the trap eats something, but NOT higher than a player-placed
+  // Threat tower — so the "seal off the 2 outer lanes with Threat Lv2 to funnel everything into the middle
+  // for the whirlpool to eat" strategy still works. At 10, the middle lane would always be the scariest lane,
+  // no matter how you try to funnel enemies, none of them would go in.
+  swirlThreat:1,
+  unlockedTowers:['dps','range','threat'],
+  // DELIBERATELY DESIGNED ECONOMY (not a hard cap — gold is used to pace how many extra ships you can buy):
+  //   start at 185 = EXACTLY: DPS(40) to block + Range(60) tucked in + Threat(35) + UPGRADE to Lv2(50) to also scare off Tankers
+  //   after W1 ~75  = enough for EXACTLY 1 more ship + a little left over
+  //   after W2 ~105 = 1 more ship + an upgrade
+  //   after W3 ~105 = 1-2 more ships to wall off the Boss
+  // Deliberately NOT leaving spare gold: spare gold lets the player patch every hole reactively, which would make the whole positioning game meaningless.
+  startGold:230, waveClearBonus:[85,95,100], killGold:5,
+  waves:[
+    { label:'Wave 1/4 — Pincer Move', spawns:[
+        {kind:'tank',time:1,side:'top'},{kind:'normal',time:5,side:'top'},{kind:'normal',time:7,side:'top'},
+        {kind:'normal',time:2,side:'mid'},{kind:'normal',time:6,side:'mid'},
+        {kind:'tank',time:1,side:'bottom'},{kind:'normal',time:5,side:'bottom'},{kind:'normal',time:8,side:'bottom'} ] },
+    { label:'Wave 2/4 — Bait for the Whirlpool', spawns:[
+        {kind:'tank',time:1,side:'top'},{kind:'normal',time:5,side:'top'},{kind:'normal',time:7,side:'top'},{kind:'normal',time:10,side:'top'},
+        {kind:'tank',time:2,side:'mid'},{kind:'normal',time:6,side:'mid'},{kind:'normal',time:9,side:'mid'},{kind:'normal',time:11,side:'mid'},
+        {kind:'tank',time:1,side:'bottom'},{kind:'normal',time:5,side:'bottom'},{kind:'normal',time:8,side:'bottom'},{kind:'normal',time:12,side:'bottom'} ] },
+    { label:'Wave 3/4 — Flank Interference', spawns:[
+        {kind:'tank',time:1,side:'top'},{kind:'tank',time:6,side:'top'},{kind:'normal',time:9,side:'top'},{kind:'normal',time:11,side:'top'},
+        {kind:'tank',time:2,side:'mid'},{kind:'normal',time:6,side:'mid'},{kind:'normal',time:9,side:'mid'},{kind:'normal',time:12,side:'mid'},{kind:'normal',time:14,side:'mid'},
+        {kind:'jammer',time:3,side:'bottom'},{kind:'tank',time:4,side:'bottom'},{kind:'tank',time:10,side:'bottom'},
+        {kind:'normal',time:8,side:'bottom'},{kind:'normal',time:13,side:'bottom'} ] },
+    { label:'Wave 4/4 — DEATH\'S DOOR', spawns:[
+        {kind:'tank',time:1,side:'top'},{kind:'normal',time:6,side:'top'},{kind:'normal',time:10,side:'top'},{kind:'normal',time:12,side:'top'},{kind:'normal',time:14,side:'top'},
+        {kind:'boss',time:5,side:'mid'},{kind:'tank',time:11,side:'mid'},{kind:'normal',time:14,side:'mid'},{kind:'normal',time:16,side:'mid'},{kind:'normal',time:18,side:'mid'},
+        {kind:'jammer',time:2,side:'bottom'},{kind:'tank',time:3,side:'bottom'},
+        {kind:'normal',time:9,side:'bottom'},{kind:'normal',time:12,side:'bottom'},{kind:'normal',time:15,side:'bottom'} ] },
+
+  ],
+});
+
+const CFG = ACTIVE_LEVEL==='man2' ? CFG_MAN2
+          : ACTIVE_LEVEL==='man3' ? CFG_MAN3
+          : ACTIVE_LEVEL==='man4' ? CFG_MAN4
+          : ACTIVE_LEVEL==='man5' ? CFG_MAN5 : CFG_MAN1;
+
+/* ---------- cell lookups ---------- */
+const ISLAND_SET = new Set(CFG.islands.map(p=>p.r+'_'+p.c));
+/* Enemy route graph built FROM segments — enemies can only walk along exactly these edges.
+   This way, a zigzag route never emerges just because 2 cells happen to be adjacent. */
+const ROUTE_ADJ = (function(){
+  const m = new Map();
+  const K = p => p.r+'_'+p.c;
+  const link = (a,b)=>{
+    [[a,b],[b,a]].forEach(([x,y])=>{
+      const k = K(x);
+      if(!m.has(k)) m.set(k, []);
+      if(!m.get(k).some(p=>p.r===y.r && p.c===y.c)) m.get(k).push({r:y.r, c:y.c});
+    });
+  };
+  (CFG.segments||[]).forEach(seg=>{ for(let i=0;i+1<seg.length;i++) link(seg[i], seg[i+1]); });
+  return m;
+})();
+function routeNeighbors(r,c){ return ROUTE_ADJ.get(r+'_'+c) || []; }
+// Route-cell list taken straight from the graph (instead of scanning the grid for 'R' characters)
+CFG.routeCells = Array.from(ROUTE_ADJ.keys()).map(k=>{ const a=k.split('_'); return {r:+a[0], c:+a[1]}; });
+const ROUTE_SET  = new Set(CFG.routeCells.map(p=>p.r+'_'+p.c));
+const NOBUILD_SET = new Set((CFG.noBuild||[]).map(p=>p.r+'_'+p.c));
+function isIsland(r,c){ return ISLAND_SET.has(r+'_'+c); }
+function isRouteCell(r,c){ return ROUTE_SET.has(r+'_'+c); }
+function isDen(r,c){ return CFG.den.r===r && CFG.den.c===c; }
+function isFort(r,c){ return CFG.fortress.r===r && CFG.fortress.c===c; }
+function isIce(r,c){ return (CFG.iceTiles||[]).some(p=>p.r===r && p.c===c); }
+function isSwirl(r,c){ return !!(CFG.swirl && CFG.swirl.r===r && CFG.swirl.c===c); }
+function inBounds(r,c){ return r>=1 && r<=CFG.rows && c>=1 && c<=CFG.cols; }
+function isWater(r,c){ return inBounds(r,c) && !isIsland(r,c); }
+function isPlaceableCell(r,c){
+  return isWater(r,c) && !isDen(r,c) && !isFort(r,c) && !NOBUILD_SET.has(r+'_'+c);
+}
+/* =====================================================================
+   STATE
+===================================================================== */
+const state = {
+  gold: CFG.startGold,
+  fortHp:100,
+  phase:'planning',        // 'planning' | 'combat'
+  running:true, paused:false,
+  speed:1,
+  stepCount:0,
+  waveIndex:0, waveStarted:false,
+  spawnQueue:[],
+  ships:[], previews:[], enemies:[],
+  selectedShipId:null,
+  showAllWaves:false,
+  unlocked:{ dps:true, range:false, threat:false },
+  tutorialStage:null,
+  encountered:new Set(),
+  // preview waiting to LOCK IN a direction (DPS): {id, dir}
+  dirPickId:null,
+  // tutorial-highlight flags (Level 2)
+  highlightWavePanel:false, highlightThreatLabel:false, highlightThreatShip:false, highlightSwirl:false, highlightIce:false,
+  swirlArmed:true, swirlCountdown:null, jammerZeroSet:new Set(),
+};
+let idc = 1;
+function towerDef(kind){ return TOWER_DEFS[kind]; }
+function enemyDef(kind){ return ENEMY_DEFS[kind]; }
+
+// initial unlocks per level
+(function initUnlocks(){
+  CFG.unlockedTowers.forEach(k=> state.unlocked[k]=true);
+  if(ACTIVE_LEVEL==='man1'){
+    // Tutorial: Range only unlocks after Wave 1 clears (per spec: at first you only have enough gold for DPS)
+    state.unlocked.range = false;
+    state.tutorialStage = 'placeDPS';
+  } else if(ACTIVE_LEVEL==='man2'){
+    state.tutorialStage = 'man2Intro';
+  }
+})();
+
+/* =====================================================================
+   THREAT is computed PER CELL, and ROUTING is done via PATHFINDING over the route-cell graph.
+
+   Why we no longer use the "compare top-lane vs bottom-lane threat" rule: a single lane can have MULTIPLE
+   branches. Placing a Threat tower that blocks part of the bottom lane does NOT mean enemies must jump
+   straight to the top lane — if a branch of that same bottom lane is still open (low threat), they'll
+   detour into it instead. Enemies only get pushed to the top lane when EVERY branch of the bottom lane
+   is blocked.
+===================================================================== */
+// The Threat of 1 cell = the highest level among any Threat towers standing exactly on that cell (+ the whirlpool if armed)
+function cellThreat(r,c, ignoreJammer){
+  let lvl = 0;
+  state.ships.forEach(s=>{
+    if(!s.alive || s.kind!=='threat') return;
+    if(s.transitPath && s.transitPath.length) return;  // hasn't arrived yet -> no effect yet
+    if(s.r===r && s.c===c) lvl = Math.max(lvl, s.threatLvl||1);
+  });
+  // The whirlpool only THREATENS while DISCHARGING (right after it just ate something). While it's ready
+  // to eat, it stays silent (threat 0), so enemies happily walk in — that's the actually dangerous moment.
+  if(!state.swirlArmed && isSwirl(r,c)) lvl = Math.max(lvl, CFG.swirlThreat!=null?CFG.swirlThreat:10);
+  // A living Jammer: every cell on the ROUTE IT'S CURRENTLY TAKING gets Threat forced to 0
+  // A Jammer zeroes Threat for its ALLIES, but when it's picking ITS OWN route it still needs to see the
+  // real threat — otherwise it would blind itself and walk straight into a lane that's actively being threatened
+  // (exactly the bug that used to happen).
+  if(!ignoreJammer && lvl>0 && state.jammerZeroSet && state.jammerZeroSet.has(r+'_'+c)) return 0;
+  return lvl;
+}
+// The set of cells a Jammer has neutralized — recomputed every time routes are replanned (based on its current path)
+function refreshJammerZero(){
+  const set = new Set();
+  state.enemies.forEach(en=>{
+    if(!en.alive || !enemyDef(en.kind).zerosRouteThreat) return;
+    // A Jammer neutralizes Threat along its ENTIRE route — computed from the ENEMY DEN, not from wherever
+    // it's currently standing. That way, enemies that walked BEFORE it in the same wave benefit too, so it
+    // can hide at the back of the pack to stay safe while still doing its job.
+    (CFG.defaultPaths[en.homeSide]||[]).forEach(p=> set.add(p.r+'_'+p.c));
+    (en.plan||[]).concat([{r:en.r,c:en.c}]).forEach(p=> set.add(p.r+'_'+p.c));
+    (en.travelled||[]).forEach(k=> set.add(k));
+  });
+  state.jammerZeroSet = set;
+}
+// Highest Threat over a list of cells (only used for DISPLAYING labels)
+function maxThreatOn(cells){ return cells.reduce((m,p)=>Math.max(m,cellThreat(p.r,p.c)),0); }
+function routeThreat(side){
+  const p = CFG.defaultPaths[side];
+  return p ? maxThreatOn(p) : 0;
+}
+
+/* ---------- PATHFINDING (Dijkstra) ----------
+   - only travels on cells that belong to an enemy route
+   - FORBIDS any cell with Threat >= that enemy's Alert Level
+   - never revisits an already-travelled cell (avoids looping back and forth)
+   - a cell on the DEFAULT PATH for the side it started from is slightly cheaper -> ties favor the default
+     path, only detouring to another branch when the default path is actually blocked.               */
+const NB4 = [[-1,0],[1,0],[0,-1],[0,1]];
+/* Cost of crossing 1 cell, which decides priority order when multiple routes exist:
+     1     — the cell is on the DEFAULT PATH of the side it started from    -> always the top priority
+     1.05  — a neutral branch cell (not on any default path)                -> detour here BEFORE the other option
+     50    — the cell is on the default path of the OTHER SIDE              -> only taken as a last resort
+   This is exactly the rule you described: if blocked, look for a detour on YOUR OWN lane first, and only
+   jump to the other side's lane once every branch of your own is threatened. */
+const COST_OWN = 1, COST_BRANCH = 1.05, COST_OTHER = 50;
+function findPath(fromR, fromC, wariness, preferSide, blockedKeys, ignoreJammer){
+  const goalKey = CFG.fortress.r+'_'+CFG.fortress.c;
+  const prefer = new Set((CFG.defaultPaths[preferSide]||[]).map(p=>p.r+'_'+p.c));
+  const other = new Set();
+  CFG.sides.forEach(sd=>{ if(sd!==preferSide)
+    (CFG.defaultPaths[sd]||[]).forEach(p=>{ const k=p.r+'_'+p.c; if(!prefer.has(k)) other.add(k); }); });
+  const dist = new Map(), prev = new Map();
+  const startKey = fromR+'_'+fromC;
+  dist.set(startKey, 0);
+  const pq = [[0, fromR, fromC]];
+  while(pq.length){
+    pq.sort((a,b)=>a[0]-b[0]);
+    const [d, r, c] = pq.shift();
+    const key = r+'_'+c;
+    if(d > (dist.get(key) ?? Infinity)) continue;
+    if(key===goalKey) break;
+    for(const nb of routeNeighbors(r,c)){
+      const nr=nb.r, nc=nb.c, nk=nr+'_'+nc;
+      if(blockedKeys && blockedKeys.has(nk)) continue;          // already visited
+      if(nk!==goalKey && cellThreat(nr,nc,ignoreJammer) >= wariness) continue; // too scary -> don't go there
+      const step = prefer.has(nk) ? COST_OWN : (other.has(nk) ? COST_OTHER : COST_BRANCH);
+      const nd = d + step;
+      if(nd < (dist.get(nk) ?? Infinity)){
+        dist.set(nk, nd); prev.set(nk, key);
+        pq.push([nd, nr, nc]);
+      }
+    }
+  }
+  if(!dist.has(goalKey)) return null;
+  const out=[]; let k=goalKey;
+  while(k!==startKey){ const [r,c]=k.split('_').map(Number); out.unshift({r,c}); k=prev.get(k); if(k==null) return null; }
+  return out;
+}
+// The path a given enemy takes, computed from its current position. If EVERY branch is threatened, it has
+// no choice but to close its eyes and take the default path (there's no safe option left).
+function planFor(r, c, kind, side, travelled){
+  const w = enemyDef(kind).wariness;
+  const selfJam = !!enemyDef(kind).zerosRouteThreat;   // Jammer: ignores its OWN threat-zeroing effect
+  const blocked = new Set(travelled||[]);
+  blocked.delete(r+'_'+c);
+  let p = findPath(r, c, w, side, blocked, selfJam);
+  if(p) return p;
+  /* No route left under the alert threshold -> we no longer fall back to the original route like before
+     (that was a bug: sealing both outer lanes with Threat and the enemy would still charge in, because
+     while the whirlpool is discharging all 3 lanes are threatened at once).
+     Instead we gradually raise the threshold: find the LEAST DANGEROUS route it's willing to accept. */
+  const levels = new Set([w]);
+  for(let r2=1;r2<=CFG.rows;r2++) for(let c2=1;c2<=CFG.cols;c2++){
+    const t = cellThreat(r2,c2,selfJam);
+    if(t>w) levels.add(t+1);
+  }
+  Array.from(levels).sort((a,b)=>a-b).forEach(lim=>{
+    if(p) return;
+    p = findPath(r, c, lim, side, blocked, selfJam);
+  });
+  if(p) return p;
+  p = findPath(r, c, Infinity, side, blocked, selfJam);
+  return p || [];
+}
+// The PREDICTED route of an enemy about to spawn (used for highlights + the wave panel, updates live)
+function predictPlan(kind, side){
+  return planFor(CFG.den.r, CFG.den.c, kind, side, []);
+}
+// Which side does this enemy end up taking? = the side whose default path overlaps most with its actual route
+function sideOfPlan(plan){
+  if(!plan || !plan.length) return CFG.sides[0];
+  let best=CFG.sides[0], bestN=-1;
+  CFG.sides.forEach(sd=>{
+    const set=new Set((CFG.defaultPaths[sd]||[]).map(p=>p.r+'_'+p.c));
+    const n=plan.filter(p=>set.has(p.r+'_'+p.c)).length;
+    if(n>bestN){ bestN=n; best=sd; }
+  });
+  return best;
+}
+
+/* =====================================================================
+   GRID — cell size is computed DYNAMICALLY from the row/col count so the map always fills the frame
+   (it used to be hardcoded to 72px/5 rows, so a 2-row map looked tiny).
+===================================================================== */
+const gridWrapEl = document.getElementById('gridWrap');
+const gridEl = document.getElementById('grid');
+const cellEls = {};
+
+const WRAP_W = 912, WRAP_H = 580, PAD = 24;
+const CELL = Math.min(
+  Math.floor((WRAP_W - PAD*2) / CFG.cols),
+  Math.floor((WRAP_H - PAD*2) / CFG.rows),
+  118 // hard ceiling, avoids oversized cells on maps with few rows
+);
+const GRID_W = CELL*CFG.cols, GRID_H = CELL*CFG.rows;
+gridEl.style.setProperty('--cell', CELL+'px');
+gridEl.style.gridTemplateColumns = `repeat(${CFG.cols}, ${CELL}px)`;
+gridEl.style.gridTemplateRows    = `repeat(${CFG.rows}, ${CELL}px)`;
+gridEl.style.left = Math.round((WRAP_W-GRID_W)/2)+'px';
+gridEl.style.top  = Math.round((WRAP_H-GRID_H)/2)+'px';
+gridWrapEl.style.setProperty('--cell', CELL+'px');
+// the old SVG lane layer is no longer used (replaced by cell highlights) — hide it so coordinates don't drift
+const laneSvgEl = document.getElementById('laneSvg');
+if(laneSvgEl) laneSvgEl.style.display='none';
+
+function cellPx(r,c){ return { left:(c-1)*CELL, top:(r-1)*CELL }; }
+
+let draggingKind = null;      // dragging a new card from the Shipyard
+let draggingMoveKind = null;  // dragging an existing ship/preview already on the map
+
+for(let r=1;r<=CFG.rows;r++){
+  for(let c=1;c<=CFG.cols;c++){
+    const div = document.createElement('div');
+    div.className = 'cell';
+    div.dataset.r=r; div.dataset.c=c;
+    if(isDen(r,c)) div.classList.add('spawn');
+    else if(isFort(r,c)) div.classList.add('fortress');
+    else if(isIsland(r,c)) div.classList.add('island');
+    else {
+      div.classList.add('placeable');       // clear border = you can drop a ship here
+      if(isIce(r,c)) div.classList.add('iceCell');
+      if(isSwirl(r,c)) div.classList.add('swirlCell');
+    }
+    const placeable = isPlaceableCell(r,c);
+    div.addEventListener('dragover', e=>{
+      if(!placeable) return;
+      e.preventDefault(); div.classList.add('dropTarget');
+      const k = draggingKind || draggingMoveKind;
+      if(k) showPlacePreview(k, r, c);
+    });
+    div.addEventListener('dragleave', ()=>{ div.classList.remove('dropTarget'); clearRangePreview(); });
+    div.addEventListener('drop', e=>{
+      e.preventDefault(); div.classList.remove('dropTarget'); clearRangePreview();
+      if(!placeable) return;
+      const kind = e.dataTransfer.getData('text/kind');
+      if(kind) tryPreviewPlace(kind, r, c);
+    });
+    // LOCK IN DIRECTION for DPS: while in direction-picking mode, moving the mouse around the cell
+    // rotates the arrow to follow it; clicking again locks it in (and buys it right away, per spec).
+    div.addEventListener('mousemove', e=>{
+      if(!state.dirPickId) return;
+      const p = state.previews.find(x=>x.id===state.dirPickId);
+      if(!p) return;
+      const box = div.getBoundingClientRect();
+      const pv = cellEls[p.r+'_'+p.c];
+      if(!pv) return;
+      const pb = pv.getBoundingClientRect();
+      const dx = e.clientX - (pb.left+pb.width/2);
+      const dy = e.clientY - (pb.top+pb.height/2);
+      const dir = Math.abs(dx)>Math.abs(dy) ? (dx>0?'right':'left') : (dy>0?'down':'up');
+      if(p.dir!==dir){ p.dir = dir; renderDirPick(); }
+    });
+    div.addEventListener('click', ()=>{
+      if(state.dirPickId){ lockDirAndBuy(); return; }
+    });
+    gridEl.appendChild(div);
+    cellEls[r+'_'+c]=div;
+  }
+}
+
+/* =====================================================================
+   DASHED ENEMY ROUTE NETWORK — drawn once when the map is built, sits below units/towers.
+   Draws a line between the centers of every 2 adjacent route cells, so it automatically produces the
+   correct shape for every level's branches, including branches the enemy is NOT currently taking.
+===================================================================== */
+function buildRouteNetwork(){
+  const NS = 'http://www.w3.org/2000/svg';
+  const svg = document.createElementNS(NS,'svg');
+  svg.id = 'routeNetSvg';
+  svg.setAttribute('viewBox', `0 0 ${CELL*CFG.cols} ${CELL*CFG.rows}`);
+  const mid = (r,c)=> [ (c-1)*CELL + CELL/2, (r-1)*CELL + CELL/2 ];
+  const seen = new Set();
+  CFG.routeCells.forEach(p=>{
+    routeNeighbors(p.r,p.c).forEach(q=>{
+      // each edge is only drawn once (normalize the order of the 2 endpoints)
+      const a = p.r+'_'+p.c, b = q.r+'_'+q.c;
+      const key = a < b ? a+'>'+b : b+'>'+a;
+      if(seen.has(key)) return;
+      seen.add(key);
+      const [x1,y1] = mid(p.r,p.c), [x2,y2] = mid(q.r,q.c);
+      const ln = document.createElementNS(NS,'line');
+      ln.setAttribute('x1',x1); ln.setAttribute('y1',y1);
+      ln.setAttribute('x2',x2); ln.setAttribute('y2',y2);
+      ln.setAttribute('stroke','rgba(200,225,255,0.30)');
+      ln.setAttribute('stroke-width','2');
+      ln.setAttribute('stroke-dasharray','7,6');
+      ln.setAttribute('stroke-linecap','round');
+      svg.appendChild(ln);
+    });
+  });
+  gridEl.appendChild(svg);
+}
+buildRouteNetwork();
+
+/* ---------- RANGE preview while dragging / once placed ---------- */
+function clearRangePreview(){
+  Object.values(cellEls).forEach(el=>{
+    el.classList.remove('rangePreview'); el.classList.remove('enemyRangePreview'); el.classList.remove('dpsAimCell');
+  });
+}
+function cellsInShape(kind, r, c, dir, upgraded){
+  const out = [];
+  const def = towerDef(kind);
+  if(def.shape==='around'){
+    const ring = tRing(kind, upgraded);   // 1 = the 8 surrounding cells; 2 = 1 more ring on top (24 cells)
+    for(let dr=-ring;dr<=ring;dr++) for(let dc=-ring;dc<=ring;dc++){
+      if(dr===0&&dc===0) continue;
+      if(inBounds(r+dr,c+dc)) out.push({r:r+dr,c:c+dc});
+    }
+  } else if(def.shape==='dir1'){
+    const d = { up:[-1,0], down:[1,0], left:[0,-1], right:[0,1] }[dir||'left'];
+    if(d && inBounds(r+d[0], c+d[1])) out.push({r:r+d[0], c:c+d[1]});
+  }
+  return out;
+}
+// Show the range while dragging a ship over a cell (r,c) — per request: "range wasn't shown while dragging a ship down"
+function showPlacePreview(kind, r, c){
+  clearRangePreview();
+  const def = towerDef(kind);
+  if(!def || def.shape==='none') return;
+  const dir = def.needsDir ? 'left' : null;
+  cellsInShape(kind, r, c, dir, false).forEach(p=>{
+    const el = cellEls[p.r+'_'+p.c];
+    if(el) el.classList.add(def.shape==='dir1' ? 'dpsAimCell' : 'rangePreview');
+  });
+}
+// Range is shown CONTINUOUSLY for every preview + every placed ship (not just while dragging)
+function paintAllRangePreviews(){
+  clearRangePreview();
+  const paint = (kind,r,c,dir,up)=>{
+    const def = towerDef(kind);
+    if(!def || def.shape==='none') return;
+    cellsInShape(kind,r,c,dir,up).forEach(p=>{
+      const el = cellEls[p.r+'_'+p.c];
+      if(el) el.classList.add(def.shape==='dir1' ? 'dpsAimCell' : 'rangePreview');
+    });
+  };
+  state.previews.forEach(p=> paint(p.kind, p.r, p.c, p.dir, false));
+  state.ships.forEach(s=>{
+    if(!s.alive) return;
+    if(s.transitPath && s.transitPath.length) return; // still en route to its slot -> can't fire yet
+    paint(s.kind, s.r, s.c, s.dir, s.upgraded);
+  });
+}
+/* =====================================================================
+   DEPLOYMENT ROUTE — a newly bought ship has to SAIL FROM THE FLAGSHIP out to its placed cell, taking a
+   number of steps equal to the path length (per the new requirement). BFS over water cells.
+===================================================================== */
+function bfsPath(fromR, fromC, toR, toC){
+  if(fromR===toR && fromC===toC) return [{r:fromR,c:fromC}];
+  const key=(r,c)=>r+'_'+c;
+  const prev = new Map(); const seen = new Set([key(fromR,fromC)]);
+  let q = [{r:fromR,c:fromC}];
+  while(q.length){
+    const nq = [];
+    for(const cur of q){
+      for(const [dr,dc] of [[-1,0],[1,0],[0,-1],[0,1]]){
+        const nr=cur.r+dr, nc=cur.c+dc;
+        if(!isWater(nr,nc)) continue;
+        if(isDen(nr,nc)) continue;               // never sails through the Enemy Den
+        const k = key(nr,nc);
+        if(seen.has(k)) continue;
+        seen.add(k); prev.set(k, cur);
+        if(nr===toR && nc===toC){
+          const path=[{r:nr,c:nc}]; let p=cur;
+          while(p){ path.unshift(p); p = prev.get(key(p.r,p.c)); }
+          return path;
+        }
+        nq.push({r:nr,c:nc});
+      }
+    }
+    q = nq;
+  }
+  return null;
+}
+function deployPathTo(r,c){
+  return bfsPath(CFG.fortress.r, CFG.fortress.c, r, c) || [{r:CFG.fortress.r,c:CFG.fortress.c},{r,c}];
+}
+
+/* =====================================================================
+   PREVIEW / BUYING
+===================================================================== */
+/* ---- Threat: which lane is ALREADY threatened? Placing another tower on that same lane does NOTHING
+   since the rule takes the HIGHEST level rather than stacking. Must block the action + say so clearly, so
+   the player never loses gold for nothing. ---- */
+function sidesThreatened(){
+  const out = {};
+  CFG.sides.forEach(sd=>{ out[sd] = routeThreat(sd) > 0; });
+  return out;
+}
+function sidesThroughCell(r,c){
+  return CFG.sides.filter(sd => (CFG.defaultPaths[sd]||[]).some(p=>p.r===r && p.c===c));
+}
+// Does placing a Threat tower on this cell actually gain anything?
+function threatPlacementUseful(r,c){
+  const through = sidesThroughCell(r,c);
+  if(!through.length) return { ok:false, why:'This cell isn\'t on any enemy route — placing a Threat tower here won\'t scare off anyone.' };
+  const th = sidesThreatened();
+  const gain = through.filter(sd => !th[sd]);
+  if(!gain.length){
+    const names = through.map(sd=>CFG.sideLabel[sd]).join(' and ');
+    return { ok:false, why:`${names} already has a Threat tower. Multiple towers on the same lane do NOT stack (it always takes the highest level) — UPGRADE the existing tower instead of buying another.` };
+  }
+  return { ok:true };
+}
+// Every lane is already threatened -> lock the Threat card in the Shipyard entirely
+function allSidesThreatened(){
+  const th = sidesThreatened();
+  return CFG.sides.every(sd=>th[sd]);
+}
+function cellOccupied(r,c){
+  return state.ships.some(s=>s.alive && s.r===r && s.c===c) ||
+         state.previews.some(p=>p.r===r && p.c===c);
+}
+function tryPreviewPlace(kind, r, c){
+  if(!state.unlocked[kind]) return;
+  if(state.gold < towerDef(kind).cost) return;
+  if(!isPlaceableCell(r,c)) return;
+  if(cellOccupied(r,c)) return;
+  if(kind==='threat'){
+    const chk = threatPlacementUseful(r,c);
+    if(!chk.ok){ balanceToast('🪤 '+chk.why, true); return; }   // does NOT charge gold, states the reason clearly
+  }
+  const def = towerDef(kind);
+  if(!def.needsDir){
+    // PLACING IT DOWN MEANS BUY + DEPLOY IMMEDIATELY (no separate "Buy" button anymore)
+    buyAndDeploy(kind, r, c, null);
+    render();
+    return;
+  }
+  // DPS: place it provisionally to LOCK IN A DIRECTION first — move the mouse around the ship to rotate it, click again to buy + deploy
+  const p = { id:'p'+(idc++), kind, r, c, preview:true, dir:'left' };
+  state.previews.push(p);
+  state.dirPickId = p.id;
+  render();
+}
+function cancelPreview(id){
+  state.previews = state.previews.filter(p=>p.id!==id);
+  if(state.dirPickId===id) state.dirPickId=null;
+  render();
+}
+function tryMovePreview(id, r, c){
+  const p = state.previews.find(x=>x.id===id);
+  if(!p) return;
+  if(r===p.r && c===p.c) return;
+  if(cellOccupied(r,c) || !isPlaceableCell(r,c)) return;
+  p.r=r; p.c=c;
+  render();
+}
+// Locking in DPS's direction -> buy + deploy right away (per spec: "once the direction is locked in, it buys automatically")
+function lockDirAndBuy(){
+  const p = state.previews.find(x=>x.id===state.dirPickId);
+  state.dirPickId = null;
+  if(!p){ render(); return; }
+  state.previews = state.previews.filter(x=>x.id!==p.id);
+  buyAndDeploy(p.kind, p.r, p.c, p.dir);
+  render();
+}
+
+function buyAndDeploy(kind, r, c, dir){
+  const def = towerDef(kind);
+  if(state.gold < def.cost) return null;
+  state.gold -= def.cost;
+  // The ship SAILS OUT FROM THE FLAGSHIP and gradually reaches its placed cell (takes time to deploy)
+  const path = deployPathTo(r, c);
+  const ship = {
+    id:'s'+(idc++), kind, dir,
+    r:path[0].r, c:path[0].c, targetR:r, targetC:c,
+    transitPath: path.slice(1),
+    upgraded:false,
+    hp:tHp(kind,false), maxHp:tHp(kind,false), alive:true,
+    spent: def.cost,                                   // total gold sunk into this ship (for computing its sell price)
+    threatLvl: kind==='threat' ? 1 : undefined,
+  };
+  state.ships.push(ship);
+  onTutorialEvent('bought', kind);
+  return ship;
+}
+/* ---- SELLING a ship: refunds SELL_REFUND% of the total gold sunk into it ---- */
+function sellValue(s){ return Math.floor((s.spent||towerDef(s.kind).cost) * SELL_REFUND); }
+function sellShip(id){
+  const s = state.ships.find(x=>x.id===id && x.alive);
+  if(!s) return;
+  state.gold += sellValue(s);
+  s.alive = false;
+  if(state.selectedShipId===id) state.selectedShipId=null;
+  render();
+}
+// Moving an ALREADY-BOUGHT ship to a different cell — also takes time to travel (reuses the transit mechanic)
+function tryMoveShip(id, r, c){
+  const s = state.ships.find(x=>x.id===id && x.alive);
+  if(!s) return;
+  if(r===s.r && c===s.c) return;
+  if(s.transitPath && s.transitPath.length) return; // still mid-transit
+  if(cellOccupied(r,c) || !isPlaceableCell(r,c)) return;
+  const path = bfsPath(s.r, s.c, r, c);
+  if(!path || path.length<2) return;
+  s.transitPath = path.slice(1);
+  s.targetR=r; s.targetC=c;
+  render();
+}
+/* ---- UPGRADING ----
+   Threat: 3 levels (changes the alert threshold it triggers). DPS/Range: 1 level — boosts HP + ATK
+   (Range also gains 1 more ring of range) and FULLY HEALS. See So_Lieu_Can_Bang_v3.md for why the upgrade
+   price equals the price of buying a new one. */
+// ONLY Threat still has upgrades — DPS/Range dropped upgrades so the anchor baseline "1 gold = 1 damage" always holds.
+function upgradeCostOf(s){
+  if(s.kind!=='threat') return null;
+  const lvl = s.threatLvl||1;
+  return lvl>=3 ? null : towerDef('threat').threatUpgradeCost[lvl-1];
+}
+function upgradeShip(id){
+  const s = state.ships.find(x=>x.id===id && x.alive);
+  if(!s) return;
+  const cost = upgradeCostOf(s);
+  if(cost==null || state.gold < cost) return;
+  state.gold -= cost;
+  s.spent = (s.spent||0) + cost;
+  if(s.kind==='threat'){
+    s.threatLvl = (s.threatLvl||1)+1;
+    onTutorialEvent('threatUpgraded', s.threatLvl);
+  } else {
+    s.upgraded = true;
+    s.maxHp = tHp(s.kind, true);
+    s.hp = s.maxHp;                 // upgrading -> FULLY HEALS
+    onTutorialEvent('upgraded', s.kind);
+  }
+  render();
+}
+/* =====================================================================
+   SHIPYARD — drag-and-drop cards, hover shows full stats
+===================================================================== */
+const shipListEl = document.getElementById('shipList');
+function renderShipyard(){
+  shipListEl.innerHTML='';
+  ['dps','range','threat'].forEach(kind=>{
+    if(!CFG.unlockedTowers.includes(kind)) return;
+    const d = towerDef(kind);
+    const unlocked = state.unlocked[kind];
+    const affordable = state.gold >= d.cost;
+    // Threat: once every lane is already threatened, buying another is pointless -> lock the card so no gold gets wasted
+    const useless = (kind==='threat') && allSidesThreatened();
+    const card = document.createElement('div');
+    card.className = 'shipCard'+(!unlocked?' locked':(useless||!affordable?' unaffordable':''));
+    card.draggable = unlocked && affordable && !useless;
+    if(useless) card.title = 'Every lane already has a Threat tower. Multiple towers on the same lane don\'t stack — upgrade the one you already have.';
+    const up = k=> kind==='threat' ? '' : ` <span style="opacity:.6">→</span> <b class="upgraded">${k}</b>`;
+    card.innerHTML = `
+      <div class="sic">${d.icon}</div>
+      <div><div class="sname">${d.name}</div><div class="scost">💰${d.cost}</div></div>
+      <div class="tooltip">
+        <div class="row"><span>HP</span><b>${d.hp[0]}</b></div>
+        <div class="row"><span>Attack</span><b>${d.atk[0]||'—'}</b></div>
+        <div class="row"><span>Range</span><b>${rangeTextOf(kind,false)}</b></div>
+        ${d.atk[0]?`<div class="row"><span>Damage / gold</span><b>${(d.atk[0]*(d.maxTargets||1)/d.cost).toFixed(2)}${d.maxTargets>1?' (when hitting all '+d.maxTargets+' targets)':''}</b></div>`:''}
+        <div class="row"><span>Simultaneous targets</span><b>${d.maxTargets||'—'}</b></div>
+        <div class="row"><span>Blocks path</span><b>${d.blocks?`yes (up to ${MAX_STACK} enemies)`:'no'}</b></div>
+        ${kind==='threat'
+          ? `<div class="row"><span>Upgrade</span><b>Lv1→2: 💰${d.threatUpgradeCost[0]}, Lv2→3: 💰${d.threatUpgradeCost[1]}</b></div>`
+          : `<div class="row"><span>Upgrade</span><b>none</b></div>`}
+        <div class="row"><span>Sell price</span><b>refunds ${Math.round(SELL_REFUND*100)}% of gold spent</b></div>
+        ${useless?`<div class="row" style="display:block;color:#ffb0a0;margin-top:3px;">⚠ Every lane already has Threat — buying more is pointless, UPGRADE the one you have.</div>`:''}
+        <div class="row" style="display:block;opacity:.85;margin-top:3px;">${d.desc}</div>
+      </div>`;
+    if(unlocked && affordable){
+      card.addEventListener('dragstart', e=>{
+        e.dataTransfer.setData('text/kind', kind);
+        draggingKind = kind;
+        e.dataTransfer.setDragImage(card.querySelector('.sic'), 16, 16);
+      });
+      card.addEventListener('dragend', ()=>{ draggingKind=null; clearRangePreview(); render(); });
+    }
+    shipListEl.appendChild(card);
+  });
+}
+
+/* =====================================================================
+   WAVE PANEL — index number + spawn timing (step) + hover shows stats (including Alert Level).
+   Levels 2/3: split by TOP LANE / BOTTOM LANE and updates LIVE with Threat.
+===================================================================== */
+function enemyTooltipRows(d){
+  return `
+    <div class="row"><span>HP</span><b>${d.hp}</b></div>
+    <div class="row"><span>Attack</span><b>${d.atk}</b></div>
+    <div class="row"><span>Alert Level</span><b style="color:#ffd54a">${isFinite(d.wariness)?d.wariness:'immune'}</b></div>
+    ${d.zerosRouteThreat?`<div class="row"><span>Special</span><b>Its route's Threat = 0</b></div>`:''}
+    ${d.slowFactor?`<div class="row"><span>Speed</span><b>slow (1 step / ${d.slowFactor} steps for other enemies)</b></div>`:''}`;
+}
+function enemyRowHtml(sp, i, waveLabel){
+  const d = enemyDef(sp.kind);
+  const spawnRef = waveLabel+'_'+i;
+  const spawned = state.enemies.some(e=>e.spawnRef===spawnRef);
+  const queued = state.spawnQueue.find(q=>q.spawnRef===spawnRef);
+  const eta = queued ? queued.remaining : sp.time;
+  const etaHtml = spawned ? '<div class="spawnEta">spawned</div>' : `<div class="spawnEta">⏳ in ${eta} steps</div>`;
+  return `<div class="enemyRow ${spawned?'done':''}">
+      <div class="idx">${i+1}.</div>
+      <div class="eic">${d.icon}</div>
+      <div class="nm">${d.name}</div>
+      ${etaHtml}
+      <div class="tooltip">
+        <div class="row"><span><b>${d.name}</b></span></div>
+        ${enemyTooltipRows(d)}
+      </div>
+    </div>`;
+}
+// For 1 wave, group enemies by the lane they WILL take (recomputed against the current Threat -> live)
+function groupSpawnsByRoute(w){
+  const groups = {};
+  w.spawns.forEach((sp,i)=>{
+    const home = sp.side || CFG.sides[0];
+    const plan = predictPlan(sp.kind, home);
+    const sd = sideOfPlan(plan);
+    // Split out the REROUTED group separately: lumping it in with the group that always took that lane
+    // would hide which enemies just got scared into switching lanes.
+    const key = (sd===home) ? sd : sd+'<'+home;
+    (groups[key] = groups[key] || []).push({sp,i,plan,home,sd,rerouted:sd!==home});
+  });
+  return groups;
+}
+function waveBodyHtml(w){
+  if(CFG.sides.length<2){
+    return w.spawns.map((sp,i)=>enemyRowHtml(sp,i,w.label)).join('');
+  }
+  const g = groupSpawnsByRoute(w);
+  const groups = {};
+  Object.keys(g).forEach(k=>{ const sd=k.split('<')[0]; (groups[sd]=groups[sd]||[]).push(...g[k]); });
+  return CFG.sides.map(sd=>{
+    const items = groups[sd]||[];
+    const thr = routeThreat(sd);
+    return `<div class="waveSideTitle">${CFG.sideLabel[sd]} — Threat ${thr}</div>` +
+      (items.length ? items.map(({sp,i})=>enemyRowHtml(sp,i,w.label)).join('')
+                    : `<div class="enemyRow" style="opacity:.45"><div class="nm">— none —</div></div>`);
+  }).join('');
+}
+function renderWavePanel(){
+  const w = CFG.waves[state.waveIndex];
+  document.getElementById('waveCounter').textContent =
+    w ? `${w.label}  ·  Wave ${state.waveIndex+1}/${CFG.waves.length}` : `Completed ${CFG.waves.length}/${CFG.waves.length}`;
+  const listEl = document.getElementById('waveList');
+  if(state.showAllWaves){
+    listEl.innerHTML = CFG.waves.map((ww,wi)=>
+      `<div class="waveGroupTitle">${ww.label}${wi===state.waveIndex?' ⬅ current':''}</div>${waveBodyHtml(ww)}`
+    ).join('');
+    return;
+  }
+  listEl.innerHTML = w ? waveBodyHtml(w) : '';
+}
+document.getElementById('waveToggleBtn').addEventListener('click', ()=>{
+  state.showAllWaves = !state.showAllWaves;
+  document.getElementById('waveToggleBtn').textContent =
+    state.showAllWaves ? 'Show Current Wave Only ▴' : 'View All Waves ▾';
+  renderWavePanel();
+});
+
+/* =====================================================================
+   HIGHLIGHT THE ROUTE ENEMIES ARE ACTUALLY TAKING + THREAT LABELS + ICON/ARROW AT THE ENEMY DEN
+===================================================================== */
+const overlayLayer = document.createElement('div');
+overlayLayer.style.position='absolute'; overlayLayer.style.inset='0'; overlayLayer.style.pointerEvents='none';
+gridEl.appendChild(overlayLayer);
+
+function clearRouteVisuals(){
+  Object.values(cellEls).forEach(el=>{ el.classList.remove('routeChosen'); el.classList.remove('routeIdle'); });
+  overlayLayer.innerHTML='';
+}
+// The set of cells the current wave's enemies will ACTUALLY cross (route recomputed against current Threat)
+function chosenRouteCells(){
+  const set = new Set();
+  const add = plan => plan.forEach(p=> set.add(p.r+'_'+p.c));
+  state.enemies.forEach(en=>{ if(en.alive){ set.add(en.r+'_'+en.c); add(en.plan||[]); } });
+  const w = CFG.waves[state.waveIndex];
+  if(w && !state.waveStarted) w.spawns.forEach(sp=> add(predictPlan(sp.kind, sp.side||CFG.sides[0])));
+  if(!set.size) add(CFG.defaultPaths[CFG.sides[0]]||[]);
+  return set;
+}
+function paintRoutes(){
+  clearRouteVisuals();
+  const chosen = chosenRouteCells();
+  CFG.routeCells.forEach(p=>{
+    const el = cellEls[p.r+'_'+p.c];
+    if(!el) return;
+    el.classList.add(chosen.has(p.r+'_'+p.c) ? 'routeChosen' : 'routeIdle');
+  });
+  paintThreatLabels();
+  paintDenWaveHints();
+  paintSwirl();
+}
+function paintSwirl(){
+  if(!CFG.swirl) return;
+  const el = cellEls[CFG.swirl.r+'_'+CFG.swirl.c];
+  if(el) el.classList.toggle('armed', !state.swirlArmed);   // paint it red while DISCHARGING (threat 10)
+  const pos = cellPx(CFG.swirl.r, CFG.swirl.c);
+  const tag = document.createElement('div');
+  tag.className='swirlCountTag'+(state.swirlArmed?' ready':'');
+  tag.style.left=pos.left+'px'; tag.style.top=(pos.top-15)+'px';
+  tag.textContent = state.swirlArmed ? '🌀 waiting for bait' : ('🌀 discharging · '+(state.swirlCountdown||0)+' steps left');
+  overlayLayer.appendChild(tag);
+  // full description on hover over the whirlpool cell — viewable even before the battle starts
+  if(el){
+    el.title = 'WHIRLPOOL\n'
+      + '• WAITING FOR BAIT: Threat = 0, enemies walk in normally. Whatever steps in gets eaten (dies, gives NO gold).\n'
+      + '  If several step in on the same step, they all die.\n'
+      + '• Once it eats, it switches to DISCHARGING for ' + (CFG.swirlCycleSteps||5) + ' steps: this cell becomes Threat = ' + (CFG.swirlThreat!=null?CFG.swirlThreat:10)
+      + ' so any enemy NOT yet on this lane will dodge to another lane;\n'
+      + '  an enemy already committed to the lane passes through safely.\n'
+      + '• After ' + (CFG.swirlCycleSteps||5) + ' steps, Threat goes back to 0 and it waits for bait again. The cycle runs continuously, it does NOT reset per wave.\n'
+      + 'Current state: ' + (state.swirlArmed ? 'WAITING FOR BAIT' : 'DISCHARGING, '+(state.swirlCountdown||0)+' steps left');
+  }
+  if(state.highlightSwirl && el) el.classList.add('tutorialSlot');
+}
+// The "Threat = N" label is placed right at the source of the threat, SPREAD ACROSS 3 CELLS along that lane.
+function paintThreatLabels(){
+  /* ONE label per LANE (not one per tower), placed at the CENTER of that lane and spread across 3 cells.
+     Avoids any cell with a ship/tower standing on it so the text doesn't overlap the icon. */
+  const used = new Set();
+  const shipAt = (r,c)=> state.ships.some(s=>s.alive && s.r===r && s.c===c);
+  CFG.sides.forEach(side=>{
+    const lvl = routeThreat(side);
+    if(lvl<=0) return;
+    const path = CFG.defaultPaths[side] || [];
+    if(!path.length) return;
+    // find the cell closest to the CENTER of the lane that has no ship on it and hasn't been claimed by another label
+    const mid = Math.floor(path.length/2);
+    let pick = null;
+    for(let d=0; d<path.length; d++){
+      for(const i of [mid-d, mid+d]){
+        if(i<1 || i>=path.length-1) continue;
+        const p = path[i];
+        const k = p.r+'_'+p.c;
+        if(shipAt(p.r,p.c) || used.has(k)) continue;
+        pick = {p, i}; break;
+      }
+      if(pick) break;
+    }
+    if(!pick) pick = { p:path[mid], i:mid };
+    // mark all 3 cells the label occupies so another lane's label doesn't overlap it
+    [-1,0,1].forEach(o=>{ const q=path[pick.i+o]; if(q) used.add(q.r+'_'+q.c); });
+    const a = path[Math.max(0,pick.i-1)], b = path[Math.min(path.length-1,pick.i+1)];
+    const horiz = (a.r===b.r);
+    const pos = cellPx(pick.p.r, pick.p.c);
+    const tag = document.createElement('div');
+    tag.className = 'routeThreatLabel'+(state.highlightThreatLabel?' attnPulse':'');
+    tag.style.left = (pos.left + CELL/2)+'px';
+    tag.style.top  = (pos.top + CELL/2)+'px';
+    tag.style.width = (CELL*3 - 14)+'px';
+    if(!horiz) tag.style.transform = 'translate(-50%,-50%) rotate(-90deg)';
+    tag.textContent = `Threat = ${lvl}`;
+    overlayLayer.appendChild(tag);
+  });
+  // The whirlpool has its own label, anchored right at its own cell (it's 1 point, not a whole lane)
+  if(!state.swirlArmed && CFG.swirl){
+    const pos = cellPx(CFG.swirl.r, CFG.swirl.c);
+    const tag = document.createElement('div');
+    tag.className = 'routeThreatLabel swirlLabel';
+    tag.style.left = (pos.left + CELL/2)+'px';
+    tag.style.top  = (pos.top - CELL*0.30)+'px';
+    tag.style.width = (CELL*2)+'px';
+    tag.textContent = `Threat = ${CFG.swirlThreat}`;
+    overlayLayer.appendChild(tag);
+  }
+}
+
+function paintDenWaveHints(){
+  const w = CFG.waves[state.waveIndex];
+  if(!w) return;
+  // Still shown WHILE FIGHTING, but only for enemies NOT OUT YET (still in the spawn queue) — so the player
+  // can see which way the next batch will go, especially right after the whirlpool/Threat just rerouted them.
+  const pending = state.waveStarted
+    ? w.spawns.filter((sp,i)=> state.spawnQueue.some(q=>q.spawnRef===w.label+'_'+i))
+    : w.spawns;
+  if(!pending.length) return;
+  const groups = groupSpawnsByRoute({label:w.label, spawns:pending});
+  const den = cellPx(CFG.den.r, CFG.den.c);
+  Object.keys(groups).forEach(key=>{
+    const items = groups[key];
+    if(!items.length) return;
+    const rn = key.split('<')[0];
+    // the REAL direction (from the recomputed route), taken from the first step leaving the den
+    const plan = items[0].plan || [];
+    const b = plan[0] || CFG.den;
+    const dr = b.r-CFG.den.r, dc = b.c-CFG.den.c;
+    const arrow = dr<0 ? '⬆' : dr>0 ? '⬇' : dc<0 ? '⬅' : '➡';
+    // group by type to show "🚤 x3"
+    const counts = {};
+    items.forEach(({sp})=> counts[sp.kind]=(counts[sp.kind]||0)+1);
+    const iconHtml = Object.keys(counts).map(k=>
+      `${enemyDef(k).icon}${counts[k]>1?`<span class="cnt">x${counts[k]}</span>`:''}`).join(' ');
+    const rerouted = items[0].rerouted;
+    const hint = document.createElement('div');
+    hint.className='denWaveHint'+(rerouted?' rerouted':'');
+    const fromLbl = rerouted ? (CFG.sideLabel[items[0].home]||items[0].home) : '';
+    hint.innerHTML = (rerouted?`<span class="warn" title="Originally headed for ${fromLbl}, rerouted after being scared off by Threat">⚠</span>`:'')
+                   + `<span class="arw">${arrow}</span>${iconHtml}`;
+    // place the icon on the EXACT SIDE it will go: up / down / to the right of the den
+    let left = den.left + CELL + 4, top = den.top + CELL/2 - 12;
+    if(dr<0){ left = den.left + CELL/2 - 26; top = den.top - 26; }
+    else if(dr>0){ left = den.left + CELL/2 - 26; top = den.top + CELL + 4; }
+    if(rerouted) top += 22;   // offset so it doesn't overlap the group that already took this lane
+    hint.style.left = Math.max(0,left)+'px';
+    hint.style.top  = Math.max(0,top)+'px';
+    overlayLayer.appendChild(hint);
+  });
+}
+
+/* =====================================================================
+   SPRITES
+===================================================================== */
+const spriteLayer = document.createElement('div');
+spriteLayer.style.position='absolute'; spriteLayer.style.inset='0'; spriteLayer.style.pointerEvents='none';
+gridEl.appendChild(spriteLayer);
+
+// Flagship HP bar shown RIGHT ON THE MAP
+const fortHpTag = document.createElement('div');
+fortHpTag.className='fortHpTag';
+gridEl.appendChild(fortHpTag);
+function renderFortHpTag(){
+  const pos = cellPx(CFG.fortress.r, CFG.fortress.c);
+  fortHpTag.style.left = pos.left+'px';
+  fortHpTag.style.top  = (pos.top + CELL*0.62)+'px';
+  const hp = Math.max(0, Math.round(state.fortHp));
+  const pct = Math.max(0, Math.min(100, state.fortHp));
+  const col = pct<30 ? '#d1594e' : (pct<60 ? '#e0b84e' : '#7fd17f');
+  fortHpTag.innerHTML = `<div class="bar"><i style="width:${pct}%;background:${col};"></i></div><div class="num">${hp}/100</div>`;
+}
+
+const spriteEls = new Map();
+function upsertSprite(id, cls, r, c, html){
+  let el = spriteEls.get(id);
+  if(!el){
+    el = document.createElement('div');
+    el.dataset.sid = id;
+    spriteLayer.appendChild(el);
+    spriteEls.set(id, el);
+  }
+  if(el.className===cls && /hitFlash/.test(cls)){ el.className=''; void el.offsetWidth; }
+  el.className = cls;
+  const pos = cellPx(r,c);
+  el.style.left = pos.left+'px'; el.style.top = pos.top+'px';
+  el.innerHTML = html;
+  return el;
+}
+function removeSprite(id){ const el=spriteEls.get(id); if(el){ el.remove(); spriteEls.delete(id); } }
+
+const DIR_GLYPH = { up:'▲', down:'▼', left:'◀', right:'▶' };
+
+function rangeTextOf(kind, upgraded){
+  const d = towerDef(kind);
+  if(d.shape==='around') return tRing(kind,upgraded)>=2 ? '2 rings around it (24 cells)' : '8 surrounding cells';
+  if(d.shape==='dir1') return '1 cell in the locked-in direction';
+  return 'does not attack';
+}
+function shipTipHtml(s){
+  const d = towerDef(s.kind);
+  return `
+    <div class="row"><span><b>${d.name}${s.upgraded?' ⭐':''}</b></span><b>${s.transitPath&&s.transitPath.length?'en route…':''}</b></div>
+    <div class="row"><span>HP</span><b>${Math.max(0,Math.round(s.hp))}/${s.maxHp}</b></div>
+    <div class="row"><span>Attack</span><b>${tAtk(s.kind,s.upgraded)||'—'}</b></div>
+    <div class="row"><span>Range</span><b>${rangeTextOf(s.kind,s.upgraded)}</b></div>
+    <div class="row"><span>Targets</span><b>${d.maxTargets||'—'}</b></div>
+    ${s.kind==='threat'?`<div class="row"><span>Threat Lv</span><b style="color:#ffd54a">${s.threatLvl||1}</b></div>`:''}
+    <div class="row"><span>Blocks path</span><b>${d.blocks?`yes (up to ${MAX_STACK})`:'no'}</b></div>
+    <div class="row"><span>Sell value</span><b>💰${sellValue(s)}</b></div>`;
+}
+function enemyTipHtml(en){
+  const d = enemyDef(en.kind);
+  return `
+    <div class="row"><span><b>${d.name}</b></span></div>
+    <div class="row"><span>HP</span><b>${Math.max(0,Math.round(en.hp))}/${d.hp}</b></div>
+    <div class="row"><span>Attack</span><b>${d.atk}</b></div>
+    <div class="row"><span>Alert Level</span><b style="color:#ffd54a">${isFinite(d.wariness)?d.wariness:'immune'}</b></div>
+    <div class="row"><span>Heading</span><b>${CFG.sideLabel[sideOfPlan(en.plan||[])]||'—'}</b></div>
+    <div class="row"><span>Remaining</span><b>${(en.plan||[]).length} cells to the Flagship</b></div>
+    <div class="row"><span>Kill it now</span><b style="color:#ffd54a">+${killGoldFor(en)} gold</b></div>
+    ${d.zerosRouteThreat?`<div class="row"><span>Special</span><b>Threat on its route = 0</b></div>`:''}`;
+}
+
+function renderSprites(){
+  const live = new Set();
+  // ---- purchased ships ----
+  state.ships.forEach(s=>{
+    if(!s.alive) return;
+    live.add(s.id);
+    const d = towerDef(s.kind);
+    const inTransit = !!(s.transitPath && s.transitPath.length);
+    const flash = (s.hitFlashUntil && Date.now()<s.hitFlashUntil) ? ' hitFlash' : '';
+    const attn = (state.highlightThreatShip && s.kind==='threat') ? ' attnShip' : '';
+    const cls = 'sprite own'+(s.upgraded?' upgraded':'')+(state.selectedShipId===s.id?' selected':'')+(inTransit?'':' movable')+flash+attn;
+    const dirBadge = (s.kind==='dps' && s.dir) ? `<div class="dirLocked">${DIR_GLYPH[s.dir]}</div>` : '';
+    const lvlBadge = (s.kind==='threat') ? `<div class="stackBadge" style="background:rgba(150,110,40,.95)">Lv${s.threatLvl||1}</div>` : '';
+    const el = upsertSprite(s.id, cls, s.r, s.c, `
+      <div class="ic" style="${inTransit?'opacity:.6':''}">${d.icon}</div>
+      ${dirBadge}${lvlBadge}
+      <div class="hpbar"><i style="width:${Math.max(0,s.hp/s.maxHp*100)}%"></i></div>
+      <div class="shipTip">${shipTipHtml(s)}</div>`);
+    el.style.pointerEvents = 'auto';
+    // ONCE PLACED IT'S FIXED: you can't drag an already-bought ship to another cell. Its position is a
+    // COMMITMENT — that's exactly what gives depth to the planning. Place it wrong and you have to SELL it
+    // (losing 40%), not just drag it around freely.
+    el.draggable = false;
+  });
+  // ---- previews (not yet bought) ----
+  // Previews are now ONLY used for DPS while locking in a direction (every other type buys immediately on placement).
+  state.previews.forEach(p=>{
+    live.add(p.id);
+    const d = towerDef(p.kind);
+    const dirBadge = p.dir ? `<div class="dirPick">${DIR_GLYPH[p.dir]}</div>` : '';
+    const hint = `<div class="dirHint">Click again to lock in the direction</div>`;
+    const el = upsertSprite(p.id, 'sprite preview', p.r, p.c, `
+      <div class="ic" style="opacity:.9">${d.icon}</div>${dirBadge}${hint}`);
+    el.style.pointerEvents='none';   // let clicks fall through to the cell below -> locks in the direction
+  });
+  // ---- enemies: several STACKED in 1 cell -> draw only 1 representative sprite + a count badge ----
+  // EACH enemy keeps its own DOM node for its whole lifetime -> CSS transitions can interpolate old->new
+  // position, so movement is SMOOTH pixel-by-pixel (no snapping). When several stack up in 1 cell, they're
+  // offset slightly so each one is still visible, with a total-count badge on the outermost one.
+  const byCell = new Map();
+  state.enemies.forEach(en=>{
+    if(!en.alive) return;
+    const k = en.r+'_'+en.c;
+    if(!byCell.has(k)) byCell.set(k, []);
+    byCell.get(k).push(en);
+  });
+  byCell.forEach(list=>{
+    list.sort((a,b)=> a.seq-b.seq);
+    list.forEach((en,i)=>{
+      live.add(en.id);
+      const d = enemyDef(en.kind);
+      const flash = (en.hitFlashUntil && Date.now()<en.hitFlashUntil) ? ' hitFlash' : '';
+      const badge = (i===list.length-1 && list.length>1) ? `<div class="stackBadge">x${list.length}</div>` : '';
+      const el = upsertSprite(en.id, 'sprite enemy'+flash, en.r, en.c, `
+        <div class="ic">${d.icon}</div>${badge}
+        <div class="hpbar"><i style="width:${Math.max(0,en.hp/d.hp*100)}%; background:#d1594e;"></i></div>
+        <div class="shipTip">${enemyTipHtml(en)}</div>`);
+      // stack offset: each one that arrives later nudges slightly down-right
+      const off = i * Math.round(CELL*0.13);
+      el.style.marginLeft = off+'px';
+      el.style.marginTop  = off+'px';
+      el.style.zIndex = 10+i;
+      el.style.pointerEvents='auto';
+    });
+  });
+  Array.from(spriteEls.keys()).forEach(id=>{ if(!live.has(id)) removeSprite(id); });
+}
+
+// DPS direction-picker arrow (its own layer, drawn over the target cell so it's clear what's being aimed at)
+function renderDirPick(){
+  paintAllRangePreviews();
+  renderSprites();
+}
+/* =====================================================================
+   WAVE / SPAWN
+===================================================================== */
+function startWave(){
+  const w = CFG.waves[state.waveIndex];
+  if(!w) return;
+  state.spawnQueue = w.spawns.map((sp,i)=>({...sp, remaining:sp.time, spawnRef:w.label+'_'+i}));
+  state.waveStarted = true;
+  // The whirlpool no longer resets per wave — it runs on its own eat/discharge cycle.   // trap is already loaded at the start of the wave
+  hideCaption();
+}
+let enemySeq = 1;
+function spawnEnemy(sp){
+  const d = enemyDef(sp.kind);
+  const side = sp.side || CFG.sides[0];
+  const en = {
+    id:'e'+(idc++), seq: enemySeq++, kind:sp.kind, spawnRef:sp.spawnRef,
+    r:CFG.den.r, c:CFG.den.c,
+    hp:d.hp, alive:true,
+    homeSide: side,                       // the side it was assigned at spawn (only a PREFERENCE, not forced)
+    travelled:[CFG.den.r+'_'+CFG.den.c],  // cells already crossed — never turns back
+    plan:[], slowLeft:0, slowTicks:0,
+  };
+  en.plan = planFor(en.r, en.c, en.kind, en.homeSide, en.travelled);
+  state.enemies.push(en);
+}
+// Recompute the route for EVERY living enemy (called every step and whenever Threat changes) —
+// this is what lets enemies react LIVE to placing/upgrading/selling a Threat tower and to the whirlpool.
+function replanEnemies(){
+  refreshJammerZero();
+  state.enemies.forEach(en=>{
+    if(!en.alive || en.phase) return;
+    en.plan = planFor(en.r, en.c, en.kind, en.homeSide, en.travelled);
+  });
+  refreshJammerZero();
+}
+
+/* =====================================================================
+   SHIP TRANSIT (Flagship -> its placed cell) — advances EVERY step, even while still in the planning phase
+===================================================================== */
+function advanceShipTransits(){
+  let moved = false;
+  state.ships.forEach(s=>{
+    if(!s.alive || !s.transitPath || !s.transitPath.length) return;
+    const next = s.transitPath.shift();
+    s.r = next.r; s.c = next.c;
+    moved = true;
+  });
+  return moved;
+}
+
+/* =====================================================================
+   ENEMY MOVEMENT — snaps cell-by-cell. A blocking tower -> enemies pile up, STACKING up to 3 units in
+   the SAME cell right in front of the tower (per spec, "blocks up to 3 enemies").
+===================================================================== */
+function towerBlockingAt(r,c){
+  return state.ships.find(s=> s.alive && s.r===r && s.c===c &&
+    towerDef(s.kind).blocks && !(s.transitPath && s.transitPath.length));
+}
+function enemiesAt(r,c){ return state.enemies.filter(e=> e.alive && e.r===r && e.c===c); }
+
+function moveEnemies(){
+  /* PHASE 0 — TRIGGER THE WHIRLPOOL TRAP BEFORE ANYONE ELSE CAN MOVE FURTHER.
+     Whichever enemy is about to step exactly onto the whirlpool cell while it's UNARMED becomes the victim
+     itself: dies instantly and arms the trap. This must run BEFORE the regular movement pass — otherwise
+     enemies standing right at the fork could slip past the fork in that SAME step and end up stuck
+     (the exact bug we hit before: 2 units died). */
+  if(CFG.swirl && state.swirlArmed){
+    let eatenThisStep = 0;
+    for(const en of state.enemies){
+      if(!en.alive || en.phase) continue;
+      if(en.slowLeft>0) continue;
+      if(enemyDef(en.kind).swirlImmune) continue;   // Boss is too big — the whirlpool can't eat it, and doesn't get triggered by it either
+      const nx = en.plan && en.plan[0];
+      if(!nx || !isSwirl(nx.r,nx.c)) continue;
+      if(towerBlockingAt(nx.r,nx.c)) continue;
+      en.plan.shift();
+      en.r = nx.r; en.c = nx.c; en.travelled.push(nx.r+'_'+nx.c);
+      // Eats EVERY enemy that steps onto the whirlpool cell in this same step (if 2-3 are stacked together,
+      // they all die), then switches to discharging.
+      en.alive = false;                     // (gives no gold)
+      state.swirlJustTriggered = true;
+      eatenThisStep++;
+    }
+    if(eatenThisStep>0){
+      state.swirlArmed = false;
+      state.swirlCountdown = CFG.swirlCycleSteps || 5;
+    }
+    // trap just triggered -> REPLAN EVERYONE'S ROUTE immediately, so an enemy right at the fork can still detour to the other branch
+    if(state.swirlJustTriggered) replanEnemies();
+  }
+  // The Boss moves slowly: only advances every slowFactor steps
+  state.enemies.forEach(en=>{
+    if(!en.alive) return;
+    if(en.phase==='arrived'){ return; }
+    const d = enemyDef(en.kind);
+    if(d.slowFactor){
+      en.slowTicks = (en.slowTicks||0)+1;
+      if(en.slowTicks % d.slowFactor !== 0) return;
+    }
+    // ice tile: stays put for 1 more step
+    if(en.slowLeft>0){ en.slowLeft--; return; }
+
+    if(!en.plan || !en.plan.length) return;                // already arrived / no route left
+    const nx = en.plan[0];
+    if(towerBlockingAt(nx.r,nx.c)) return;                 // blocked by a tower -> stops (stacks up)
+    if(enemiesAt(nx.r,nx.c).length >= MAX_STACK) return;   // that cell already has 3 -> waits its turn
+    en.plan.shift();
+    en.r = nx.r; en.c = nx.c;
+    en.travelled.push(nx.r+'_'+nx.c);
+    if(isIce(en.r,en.c)) en.slowLeft = 1;
+    // Trap already discharged and something still steps in (only happens when it got funneled with no clean route left) -> dies
+    // while discharging it's harmless to walk through; it only kills if the trap is ARMED (already handled in phase 0)
+    if(isSwirl(en.r,en.c) && state.swirlArmed && !enemyDef(en.kind).swirlImmune){ en.alive = false; return; }
+    if(isFort(en.r,en.c)) en.phase='arrived';
+  });
+}
+// An enemy that reached the Flagship cell -> deals damage then disappears
+function resolveFortHits(){
+  state.enemies.forEach(en=>{
+    if(en.alive && en.phase==='arrived'){
+      // A BOSS reaching the Flagship = INSTANT LOSS, no matter how much HP is left (Level 5 rule)
+      if(enemyDef(en.kind).instantLose) state.fortHp = 0;
+      else state.fortHp -= enemyDef(en.kind).atk*3;
+      en.alive = false;   // reaching the Flagship -> gives NO gold
+    }
+  });
+}
+// End-of-level star rating based on remaining Flagship HP — gives the player a reason to replay without raising the difficulty
+function starsFor(hp){ return hp>=100 ? 3 : (hp>=60 ? 2 : 1); }
+
+/* =====================================================================
+   COMBAT — each tower attacks the enemies within its RANGE (DPS: 1 cell in the locked-in direction, only
+   the 1 enemy "at the front"; Range: 8 surrounding cells, up to 3 enemies). Any enemy CURRENTLY BLOCKED BY
+   a tower attacks that tower back (so 3 Normals piling onto 1 DPS really hurts -> you need a Range to clean up the group).
+===================================================================== */
+function enemiesBlockedBy(tower){
+  // an enemy standing where the NEXT cell on its route is exactly this tower's cell
+  return state.enemies.filter(en=>{
+    if(!en.alive || en.phase) return false;
+    const nx = en.plan && en.plan[0];
+    return nx && nx.r===tower.r && nx.c===tower.c;
+  });
+}
+function stepCombatResolve(){
+  // Combat happens SIMULTANEOUSLY: lock in the list of enemies currently blocking BEFORE towers strike, so
+  // an enemy that dies this very step still lands 1 counter-hit. If computed afterward, any tower that
+  // one-shots an enemy would NEVER take damage — which is nonsensical and would ruin the whole matchup
+  // balance (a DPS blocking a whole group without losing any HP).
+  const blockedBy = new Map();
+  state.ships.forEach(tower=>{
+    if(!tower.alive) return;
+    if(tower.transitPath && tower.transitPath.length) return;
+    if(towerDef(tower.kind).blocks) blockedBy.set(tower.id, enemiesBlockedBy(tower));
+  });
+
+  state.ships.forEach(tower=>{
+    if(!tower.alive) return;
+    if(tower.transitPath && tower.transitPath.length) return; // hasn't arrived yet -> can't attack yet
+    const def = towerDef(tower.kind);
+
+    // --- tower deals damage ---
+    const atkNow = tAtk(tower.kind, tower.upgraded);
+    if(atkNow>0){
+      const cells = cellsInShape(tower.kind, tower.r, tower.c, tower.dir, tower.upgraded);
+      let inRange = [];
+      cells.forEach(p=> inRange = inRange.concat(enemiesAt(p.r,p.c)));
+      inRange = inRange.filter(e=>!e.phase);
+      inRange.sort((a,b)=> a.seq-b.seq);           // "enemy at the front" = the one that entered the map earliest
+      const targets = inRange.slice(0, def.maxTargets);
+      targets.forEach(en=>{
+        en.hp -= atkNow;
+        en.hitFlashUntil = Date.now()+300;
+        if(en.hp<=0) killEnemy(en);
+      });
+    }
+
+    // --- enemies BLOCKED by this tower counterattack it (even a tower that can't fire) ---
+    if(def.blocks){
+      const blockers = blockedBy.get(tower.id) || [];
+      blockers.forEach(en=>{
+        tower.hp -= enemyDef(en.kind).atk;
+        tower.hitFlashUntil = Date.now()+300;
+      });
+      if(tower.hp<=0) tower.alive=false;
+    }
+  });
+  state.enemies = state.enemies.filter(e=>e.alive);
+  state.ships.forEach(s=>{ if(s.alive && s.hp<=0) s.alive=false; });
+}
+/* Gold reward based on TACTICAL QUALITY, not on frugality: blocking an enemy FAR AWAY (near the start of
+   the route) earns UP TO TRIPLE the gold compared to letting it crawl right up to the Flagship before
+   killing it. -> aggressive forward defense (harder, requires correctly predicting the enemy's route) is
+   properly rewarded; turtling right at the door is safe but leaves you poor. This reward is for GOOD
+   POSITIONING, not for counting every last coin. */
+/* Gold reward for killing 1 enemy. ONLY counted when the PLAYER'S SHIP is what kills it —
+   dying to the whirlpool, or reaching the Flagship, gives NO gold either way (see moveEnemies/resolveFortHits:
+   those set alive=false directly, bypassing killEnemy).
+   The position multiplier is capped between x1..x2 (it used to be x1..x3) to keep income per wave
+   PREDICTABLE, which is what makes it possible to design "after this wave you can afford exactly this many more ships."*/
+function killGoldFor(en){
+  const total = (CFG.defaultPaths[en.homeSide]||[]).length || 1;
+  const left  = (en.plan||[]).length;
+  const far   = Math.max(0, Math.min(1, left/total));  // 1 = just left the den, 0 = right next to the Flagship
+  return Math.round(CFG.killGold * (1 + far));
+}
+// Call THIS function only when the player's ship is what actually killed the enemy -> only then does gold get added.
+function killEnemy(en){
+  en.alive=false;
+  const g = killGoldFor(en);
+  state.gold += g;
+  state.lastKillGold = g;
+  state.encountered.add(en.kind);
+}
+
+/* =====================================================================
+   1 STEP
+===================================================================== */
+function stepCombat(){
+  state.stepCount++;
+  // The WHIRLPOOL runs on a CYCLE: after it drowns 1 enemy it shuts off for a few steps (enemies sneak
+  // through that lane while it's off), then re-arms itself once time's up -> the player has to TIME it
+  // rather than get 1 free use and done.
+  // Whirlpool: ARMED -> eats exactly 1 -> DISCHARGES (harmless) for a few steps -> re-ARMS itself.
+  // While DISCHARGING that cell's Threat = 0 so enemies pass through normally; once ARMED its Threat = 10 so
+  // any enemy STILL AT THE DEN will dodge to another lane, and only ones already committed to the lane get eaten.
+  if(CFG.swirl && !state.swirlArmed && state.swirlCountdown!=null){
+    state.swirlCountdown--;
+    if(state.swirlCountdown<=0){ state.swirlArmed=true; state.swirlCountdown=null; }
+  }
+  resolveFortHits();
+  // FIGHT FIRST, MOVE SECOND. It used to be the other way around, so an enemy that had just stepped into
+  // range would get hit IMMEDIATELY in that same step while its sprite was still gliding toward the cell —
+  // it looked like "it hasn't even arrived and it's already being shot." Now it must spend a FULL step
+  // standing in range before fighting starts, matching exactly what you see on the map.
+  stepCombatResolve();
+  state.enemies = state.enemies.filter(e=>e.alive);
+  replanEnemies();     // reacts live to Threat / whirlpool / Jammer
+  moveEnemies();
+  if(state.swirlJustTriggered){ state.swirlJustTriggered = false; onTutorialEvent('swirlArmed'); }
+  // SPAWN after movement: a freshly spawned enemy stays put at the Enemy Den for this entire step (clearly
+  // visible "emerging"), and only starts moving on the next step — instead of jumping a cell in the very
+  // same step it spawned.
+  for(let i=state.spawnQueue.length-1;i>=0;i--){
+    const sp = state.spawnQueue[i];
+    sp.remaining--;
+    if(sp.remaining<=0){ spawnEnemy(sp); state.spawnQueue.splice(i,1); }
+  }
+  checkWaveEnd();
+  checkLoss();
+  render();
+}
+
+/* =====================================================================
+   CAPTION / TUTORIAL
+===================================================================== */
+const captionEl = document.getElementById('caption');
+function setCaption(html){ captionEl.innerHTML=html; captionEl.classList.add('show'); }
+function hideCaption(){ captionEl.classList.remove('show'); }
+
+function onTutorialEvent(evt, arg){
+  if(ACTIVE_LEVEL==='man4'){
+    if(evt==='swirlArmed'){
+      state.highlightSwirl = true;
+      setCaption('🌀 <b>The Whirlpool trap just triggered!</b> The one that just stepped in got dragged down and killed — and by doing so, it armed the trap: that cell now has <b>Threat = 10</b> so <b>everyone behind it sees it and dodges</b>. Notice: they detour down the <b>lower loop</b> instead of jumping to the top lane. To force them onto the top lane, you\'d also need to seal off that detour with Threat.');
+    }
+    render();
+    return;
+  }
+  if(ACTIVE_LEVEL==='man1'){
+    if(evt==='bought' && arg==='dps' && state.tutorialStage==='placeDPS'){
+      state.tutorialStage='wave1';
+      setCaption('👉 The DPS is leaving the Flagship for its position (takes a few steps to arrive). It blocks the path and attacks 1 cell in its locked-in direction — plenty to solo a <b>Tanker</b>. Click <b>⚔ Start Battle</b> (or <b>⏭ Run 1 Step</b> to watch it step by step) to kick off Wave 1!');
+    } else if(evt==='bought' && arg==='range' && state.tutorialStage==='placeRange'){
+      state.tutorialStage='wave2';
+      setCaption('👉 Range hits <b>8 surrounding cells</b> and can strike up to <b>3 enemies at once</b> — exactly what you need to clear a cluster of 3 Normals. Click <b>⚔ Start Battle</b> to kick off Wave 2!');
+    }
+  } else if(ACTIVE_LEVEL==='man2'){
+    if(evt==='bought' && arg==='threat'){
+      // Once Threat is placed -> flash the WAVE PANEL on the left + the "Threat = 1" label on the lane (per request)
+      state.tutorialStage='threatPlaced';
+      state.highlightWavePanel = true;
+      state.highlightThreatLabel = true;
+      setCaption('👉 Threat placed! See the <b>"Threat = 1"</b> label flashing on the bottom lane — that lane is now scary. The Wave panel on the left (also flashing) has split itself into <b>Top Lane / Bottom Lane</b> and updates live with Threat.');
+    } else if(evt==='threatUpgraded'){
+      const msg = arg===2
+        ? '👉 Threat Lv2 — now scares off <b>Tankers</b> too (Alert Level 2), not just Normals.'
+        : '👉 Threat Lv3 — now scares off <b>Jammers</b> too (Alert Level 3).';
+      setCaption(msg+' Hover over an enemy\'s name in the left panel, or an enemy/ship icon on the map, to see its Alert Level.');
+    }
+  }
+  render();
+}
+
+/* =====================================================================
+   WAVE END / LOSS / WIN
+===================================================================== */
+function checkWaveEnd(){
+  if(!state.waveStarted) return;
+  if(state.spawnQueue.length) return;
+  if(state.enemies.some(e=>e.alive)) return;
+  state.waveStarted=false;
+  state.highlightIce = false;   // once the ice-tile lesson is learned, stop flashing it
+  // The whirlpool returns to safe the moment planning resumes (it's never left "armed" the whole time you're setting up)
+  state.gold += CFG.waveClearBonus[state.waveIndex] || 60;
+  const finished = state.waveIndex;
+  state.waveIndex++;
+  state.phase='planning';
+  if(ACTIVE_LEVEL==='man1' && finished===0 && !state.unlocked.range){
+    state.unlocked.range = true;
+    state.tutorialStage = 'placeRange';
+    setCaption('🎉 The Tanker went down to the DPS! The next wave adds <b>3 Normals</b> traveling together — the DPS only hits 1 per step so the whole cluster will swarm it. Buy <b>Range</b> (the card that just unlocked) to clear all 3 at once.');
+    renderShipyard(); render();
+    return;
+  }
+  if(ACTIVE_LEVEL==='man4' && finished===0){
+    state.highlightSwirl = true;
+    setCaption('🌀 Keep in mind: the <b>Whirlpool resets after EVERY wave</b> — at the start of the next wave the trap is unarmed again, so the first enemy on the middle lane will charge in and die, and only the ones behind it will dodge. Every wave "gives away" 1 free kill like that.');
+  }
+  if(ACTIVE_LEVEL==='man2' && finished===0){
+    state.highlightWavePanel = false;
+    const hasThreat = state.ships.some(s=>s.alive && s.kind==='threat');
+    if(hasThreat){
+      // Flash the ACTUAL Threat tower icon on the map so the player knows to click it to open the upgrade panel
+      state.highlightThreatShip = true;
+      state.tutorialStage = 'upgradeThreat';
+      setCaption('🎉 Wave 1 done! <b>Click the flashing Threat tower on the map</b> to open the upgrade panel on the right. Reaching <b>Lv2</b> will scare off <b>Tankers</b> too (Alert Level 2), not just Normals. Hover over an enemy\'s name in the left panel to see its Alert Level.');
+    } else {
+      state.tutorialStage = 'buyThreat';
+      setCaption('🎉 Wave 1 done! To scare enemies onto the <b>top lane</b> (which has an ice tile 🧊 that slows them by 1 step), buy a <b>Threat</b> tower (the flashing card) and place it on the <b>flashing cell</b> in the bottom lane.');
+    }
+  }
+  if(state.waveIndex>=CFG.waves.length){
+    state.running=false;
+    render();
+    // Wait a beat before announcing the level is over — gives the player time to see the last enemy explode
+    setTimeout(()=> showEndModal(true), 1400);
+    return;
+  }
+  render();
+}
+function checkLoss(){
+  if(state.fortHp<=0 && state.running){
+    state.fortHp=0;
+    state.running=false;
+    render();
+    setTimeout(()=> showEndModal(false), 1400);
+  }
+}
+function showEndModal(win){
+  const overlay=document.getElementById('endOverlay');
+  const title=document.getElementById('endTitle');
+  const msg=document.getElementById('endMsg');
+  const nextBtn=document.getElementById('nextLevelBtn');
+  const NEXT={man1:'#man2',man2:'#man3',man3:'#man4',man4:'#man5'};
+  const hasNext = !!NEXT[ACTIVE_LEVEL];
+  if(win){
+    const st = starsFor(Math.round(state.fortHp));
+    title.textContent = `${'⭐'.repeat(st)}${'☆'.repeat(3-st)}  ${CFG.label} Complete!`;
+    msg.textContent = `The Flagship has ${Math.round(state.fortHp)}/100 HP left → ${st}/3 stars.`
+      + (st<3 ? ' Keep the Flagship from taking a single hit to earn 3 stars.' : '')
+      + (hasNext ? ' Ready for the next level?' : ' You\'ve completed all 5 levels!');
+    nextBtn.style.display = hasNext ? 'inline-block':'none';
+    nextBtn.onclick = ()=>{ location.hash = NEXT[ACTIVE_LEVEL]; location.reload(); };
+  } else {
+    title.textContent='💥 The Flagship Has Sunk';
+    msg.textContent='The enemy overwhelmed your defenses. Try again with a different ship layout!';
+    nextBtn.style.display='none';
+  }
+  overlay.classList.add('open');
+}
+document.getElementById('replayLevelBtn').addEventListener('click', ()=> location.reload());
+
+/* =====================================================================
+   SELECT A SHIP ON THE MAP -> detail panel + upgrade button (only Threat has upgrades)
+===================================================================== */
+spriteLayer.addEventListener('click', e=>{
+  const own = e.target.closest('.sprite.own');
+  if(!own) return;
+  const s = state.ships.find(x=>x.id===own.dataset.sid && x.alive);
+  if(!s) return;
+  state.selectedShipId = (state.selectedShipId===s.id) ? null : s.id;
+  if(s.kind==='threat') state.highlightThreatShip = false;   // stop flashing once it's been clicked
+  render();
+});
+function renderSelectedBox(){
+  const box=document.getElementById('selectedBox');
+  const s=state.ships.find(x=>x.id===state.selectedShipId && x.alive);
+  const sellBtn=document.getElementById('sellBtn');
+  if(!s){ box.classList.remove('open'); return; }
+  box.classList.add('open');
+  const d=towerDef(s.kind);
+  document.getElementById('selTitle').textContent = `${d.icon} ${d.name}${s.upgraded?' ⭐ (upgraded)':''}`;
+  document.getElementById('selStatRows').innerHTML = `
+    <div class="statRow"><span>HP</span><b>${Math.max(0,Math.round(s.hp))}/${s.maxHp}</b></div>
+    <div class="statRow"><span>Attack</span><b>${tAtk(s.kind,s.upgraded)||'—'}</b></div>
+    <div class="statRow"><span>Range</span><b>${rangeTextOf(s.kind,s.upgraded)}</b></div>
+    <div class="statRow"><span>Targets</span><b>${d.maxTargets||'—'}</b></div>
+    ${s.kind==='threat'?`<div class="statRow"><span>Threat Lv</span><b class="upgraded">${s.threatLvl||1}</b></div>`:''}
+    <div class="statRow"><span>Invested</span><b>💰${s.spent||d.cost}</b></div>`;
+  const btn=document.getElementById('upgradeBtn');
+  const cost = upgradeCostOf(s);
+  if(cost==null){
+    btn.textContent = s.kind==='threat' ? 'Already Lv3 (max)' : 'This type has no upgrade';
+    btn.disabled=true; btn.classList.add('done'); btn.onclick=null;
+  } else {
+    if(s.kind==='threat'){
+      const lvl=s.threatLvl||1;
+      btn.textContent=`⭐ Upgrade to Lv${lvl+1} — 💰${cost} (also scares off ${lvl===1?'Tankers':'Jammers'})`;
+    } else {
+      btn.textContent=`⭐ Upgrade — 💰${cost} (HP ${d.hp[0]}→${d.hp[1]}, ATK ${d.atk[0]}→${d.atk[1]}, fully heals)`;
+    }
+    btn.disabled = state.gold<cost;
+    btn.classList.remove('done');
+    btn.onclick = ()=> upgradeShip(s.id);
+  }
+  if(sellBtn){
+    sellBtn.textContent = `💸 Sell Ship — get back 💰${sellValue(s)}`;
+    sellBtn.disabled=false;
+    sellBtn.onclick = ()=> sellShip(s.id);
+  }
+}
+
+/* =====================================================================
+   START BATTLE / RUN 1 STEP / SPEED BUTTONS
+===================================================================== */
+function canStartBattle(){
+  return state.phase==='planning' && state.running && state.waveIndex < CFG.waves.length;
+}
+const startBtn = document.getElementById('startBattleBtn');
+const stepBtn  = document.getElementById('stepOnceBtn');
+startBtn.addEventListener('click', ()=>{
+  if(state.phase==='combat'){ state.paused=!state.paused; render(); return; }
+  if(!canStartBattle()) return;
+  state.phase='combat'; state.paused=false;
+  state.previews=[]; state.dirPickId=null;
+  startWave();
+  render();
+});
+// RUN EXACTLY 1 STEP then stop (per spec) — disabled while continuously battling
+stepBtn.addEventListener('click', ()=>{
+  if(state.phase!=='combat'){
+    if(!canStartBattle()) return;
+    state.phase='combat'; state.paused=true;  // enters combat but starts paused -> only advances manually
+    state.previews=[]; state.dirPickId=null;
+    startWave();
+  }
+  advanceShipTransits();
+  stepCombat();
+});
+function renderPhaseUI(){
+  const chip=document.getElementById('phaseChip');
+  if(state.phase==='combat'){
+    chip.textContent = state.paused ? '⏸ Paused' : '⚔ In Battle';
+    startBtn.classList.remove('ready','pulseAttn');
+    startBtn.classList.add('combatBtn');
+    startBtn.classList.toggle('paused', state.paused);
+    startBtn.textContent = state.paused ? '▶ Resume' : '⏸ Pause';
+    // running continuously -> lock the 1-step button; paused -> allow manual stepping
+    stepBtn.disabled = !state.paused;
+  } else {
+    chip.textContent='🛠 Preparing';
+    startBtn.classList.remove('combatBtn','paused');
+    startBtn.classList.toggle('ready', canStartBattle());
+    startBtn.textContent='⚔ Start Battle';
+    stepBtn.disabled = !canStartBattle();
+  }
+  if(!state.running){ startBtn.disabled=true; stepBtn.disabled=true; }
+}
+const MAN2_THREAT_SLOT = {r:2,c:7};   // the cell the Level 2 tutorial tells the player to place Threat on
+function updateAttentionHighlights(){
+  document.querySelectorAll('.pulseAttn').forEach(el=>el.classList.remove('pulseAttn'));
+  document.querySelectorAll('.cell.tutorialSlot').forEach(el=>el.classList.remove('tutorialSlot'));
+  // this function runs AFTER paintRoutes, so the whirlpool cell's highlight has to be reapplied here, otherwise it gets wiped out
+  if(state.highlightSwirl && CFG.swirl){
+    const sw = cellEls[CFG.swirl.r+'_'+CFG.swirl.c];
+    if(sw) sw.classList.add('tutorialSlot');
+  }
+  // Emphasize the ICE TILE right when entering the level (per spec: "highlight/emphasize the blue-colored cell")
+  if(state.highlightIce && CFG.iceTile){
+    const ic = cellEls[CFG.iceTile.r+'_'+CFG.iceTile.c];
+    if(ic) ic.classList.add('tutorialSlot');
+  }
+  const wp = document.getElementById('wavePanel');
+  if(wp) wp.classList.toggle('attnPulse', !!state.highlightWavePanel);
+
+  if(state.phase!=='combat' && canStartBattle() &&
+     (state.tutorialStage==='wave1'||state.tutorialStage==='wave2'||state.tutorialStage==='threatPlaced')){
+    startBtn.classList.add('pulseAttn');
+  }
+  let wantCard = state.tutorialStage==='placeDPS' ? 'DPS'
+               : state.tutorialStage==='placeRange' ? 'Range'
+               : (state.tutorialStage==='buyThreat' || state.tutorialStage==='man2Intro') ? 'Threat' : null;
+  // Right after entering Level 2: flash the Threat card + cell 2:7 (per request)
+  if(ACTIVE_LEVEL==='man2' && (state.tutorialStage==='man2Intro'||state.tutorialStage==='buyThreat')){
+    const cell = cellEls[MAN2_THREAT_SLOT.r+'_'+MAN2_THREAT_SLOT.c];
+    if(cell && !state.ships.some(s=>s.alive&&s.r===MAN2_THREAT_SLOT.r&&s.c===MAN2_THREAT_SLOT.c)){
+      cell.classList.add('tutorialSlot');
+    }
+  }
+  if(wantCard){
+    const card = Array.from(document.querySelectorAll('.shipCard'))
+      .find(c=> c.querySelector('.sname') && c.querySelector('.sname').textContent===wantCard);
+    if(card && !card.classList.contains('locked')) card.classList.add('pulseAttn');
+  }
+}
+
+/* =====================================================================
+   MASTER RENDER
+===================================================================== */
+function render(){
+  document.getElementById('goldVal').textContent = state.gold;
+  document.getElementById('fortHpVal').textContent = Math.max(0,Math.round(state.fortHp));
+  renderShipyard();
+  renderWavePanel();
+  renderSelectedBox();
+  paintRoutes();
+  renderSprites();
+  paintAllRangePreviews();
+  renderFortHpTag();
+  renderPhaseUI();
+  updateAttentionHighlights();
+  renderSpeedUI();
+}
+
+let tickTimer=null;
+function tickFn(){
+  if(!state.running || state.paused) return;
+  const moved = advanceShipTransits();
+  if(state.phase==='combat') stepCombat();
+  else if(moved) render();
+}
+function startTicker(){
+  if(tickTimer) clearInterval(tickTimer);
+  const dur = STEP_MS/state.speed;
+  // tell CSS how long 1 step lasts -> sprites glide in sync, no stutter/no lag
+  document.documentElement.style.setProperty('--stepdur', (dur/1000)+'s');
+  tickTimer = setInterval(tickFn, dur);
+}
+function renderSpeedUI(){
+  document.querySelectorAll('.speedBtn').forEach(b=>{
+    b.classList.toggle('active', !state.paused && +b.dataset.speed===state.speed);
+  });
+}
+document.querySelectorAll('.speedBtn').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    state.speed = +b.dataset.speed;
+    state.paused = false;
+    startTicker(); render();
+  });
+});
+
+/* =====================================================================
+   EXTERNAL DATA SOURCE — connects the game to a table file (.csv) so numbers can be tweaked WITHOUT
+   touching code. Click the "📊 Balance Data" button -> pick So_Lieu_Can_Bang.csv. From then on, just
+   EDIT & SAVE that file (Excel / a downloaded Google Sheet / Notepad) and the game updates AUTOMATICALLY,
+   no page reload needed. The file has 3 columns: Group, Data Key, Value (a Notes column is optional and ignored by the game).
+===================================================================== */
+function balanceSchema(){
+  const s = {
+    'rule.maxStack':        { get:()=>MAX_STACK,             set:v=>{ MAX_STACK=v; } },
+    'rule.stepMs':          { get:()=>STEP_MS,               set:v=>{ STEP_MS=v; startTicker(); } },
+    'rule.sellRefund':      { get:()=>SELL_REFUND,           set:v=>{ SELL_REFUND=v; } },
+    'tower.dps.cost':       { get:()=>TOWER_DEFS.dps.cost,   set:v=>TOWER_DEFS.dps.cost=v },
+    'tower.dps.hp':         { get:()=>TOWER_DEFS.dps.hp[0],  set:v=>TOWER_DEFS.dps.hp[0]=v },
+    'tower.dps.hpUp':       { get:()=>TOWER_DEFS.dps.hp[1],  set:v=>TOWER_DEFS.dps.hp[1]=v },
+    'tower.dps.atk':        { get:()=>TOWER_DEFS.dps.atk[0], set:v=>TOWER_DEFS.dps.atk[0]=v },
+    'tower.dps.atkUp':      { get:()=>TOWER_DEFS.dps.atk[1], set:v=>TOWER_DEFS.dps.atk[1]=v },
+    'tower.dps.upgradeCost':{ get:()=>TOWER_DEFS.dps.upgradeCost, set:v=>TOWER_DEFS.dps.upgradeCost=v },
+    'tower.range.cost':     { get:()=>TOWER_DEFS.range.cost,  set:v=>TOWER_DEFS.range.cost=v },
+    'tower.range.hp':       { get:()=>TOWER_DEFS.range.hp[0], set:v=>TOWER_DEFS.range.hp[0]=v },
+    'tower.range.hpUp':     { get:()=>TOWER_DEFS.range.hp[1], set:v=>TOWER_DEFS.range.hp[1]=v },
+    'tower.range.atk':      { get:()=>TOWER_DEFS.range.atk[0],set:v=>TOWER_DEFS.range.atk[0]=v },
+    'tower.range.atkUp':    { get:()=>TOWER_DEFS.range.atk[1],set:v=>TOWER_DEFS.range.atk[1]=v },
+    'tower.range.ring':     { get:()=>TOWER_DEFS.range.ring[0],set:v=>TOWER_DEFS.range.ring[0]=v },
+    'tower.range.ringUp':   { get:()=>TOWER_DEFS.range.ring[1],set:v=>TOWER_DEFS.range.ring[1]=v },
+    'tower.range.maxTargets':{get:()=>TOWER_DEFS.range.maxTargets,set:v=>TOWER_DEFS.range.maxTargets=v },
+    'tower.range.upgradeCost':{get:()=>TOWER_DEFS.range.upgradeCost,set:v=>TOWER_DEFS.range.upgradeCost=v },
+    'tower.threat.cost':    { get:()=>TOWER_DEFS.threat.cost, set:v=>TOWER_DEFS.threat.cost=v },
+    'tower.threat.hp':      { get:()=>TOWER_DEFS.threat.hp[0],set:v=>{TOWER_DEFS.threat.hp[0]=v;TOWER_DEFS.threat.hp[1]=v;} },
+    'tower.threat.upCostLv2':{get:()=>TOWER_DEFS.threat.threatUpgradeCost[0],set:v=>TOWER_DEFS.threat.threatUpgradeCost[0]=v },
+    'tower.threat.upCostLv3':{get:()=>TOWER_DEFS.threat.threatUpgradeCost[1],set:v=>TOWER_DEFS.threat.threatUpgradeCost[1]=v },
+    'enemy.normal.hp':      { get:()=>ENEMY_DEFS.normal.hp,  set:v=>ENEMY_DEFS.normal.hp=v },
+    'enemy.normal.atk':     { get:()=>ENEMY_DEFS.normal.atk, set:v=>ENEMY_DEFS.normal.atk=v },
+    'enemy.normal.wariness':{ get:()=>ENEMY_DEFS.normal.wariness, set:v=>ENEMY_DEFS.normal.wariness=v },
+    'enemy.tank.hp':        { get:()=>ENEMY_DEFS.tank.hp,    set:v=>ENEMY_DEFS.tank.hp=v },
+    'enemy.tank.atk':       { get:()=>ENEMY_DEFS.tank.atk,   set:v=>ENEMY_DEFS.tank.atk=v },
+    'enemy.tank.wariness':  { get:()=>ENEMY_DEFS.tank.wariness, set:v=>ENEMY_DEFS.tank.wariness=v },
+    'enemy.jammer.hp':      { get:()=>ENEMY_DEFS.jammer.hp,  set:v=>ENEMY_DEFS.jammer.hp=v },
+    'enemy.jammer.atk':     { get:()=>ENEMY_DEFS.jammer.atk, set:v=>ENEMY_DEFS.jammer.atk=v },
+    'enemy.jammer.wariness':{ get:()=>ENEMY_DEFS.jammer.wariness, set:v=>ENEMY_DEFS.jammer.wariness=v },
+  };
+  const LV = { man1:CFG_MAN1, man2:CFG_MAN2, man3:CFG_MAN3, man4:CFG_MAN4, man5:CFG_MAN5 };
+  Object.keys(LV).forEach(name=>{
+    const L = LV[name];
+    s[name+'.startGold'] = { get:()=>L.startGold, set:v=>L.startGold=v };
+    s[name+'.killGold']  = { get:()=>L.killGold,  set:v=>L.killGold=v };
+    L.waveClearBonus.forEach((_,i)=>{
+      s[name+'.waveBonus'+(i+1)] = { get:()=>L.waveClearBonus[i], set:v=>L.waveClearBonus[i]=v };
+    });
+    if(L.swirl){
+      s[name+'.swirlThreat'] = { get:()=>L.swirlThreat, set:v=>L.swirlThreat=v };
+    }
+  });
+  return s;
+}
+function parseBalanceCsv(text){
+  const out = {};
+  text.split(/\r?\n/).forEach(line=>{
+    if(!line.trim()) return;
+    // simple CSV splitting (supports cells wrapped in ")
+    const cells = line.match(/("([^"]|"")*"|[^,]*)(,|$)/g).map(s=>s.replace(/,$/,'').replace(/^"|"$/g,'').replace(/""/g,'"').trim());
+    const key = cells[1], raw = cells[2];
+    if(!key || raw===undefined || raw==='') return;
+    const num = Number(String(raw).replace(',', '.'));
+    if(!isNaN(num)) out[key] = num;
+  });
+  return out;
+}
+function applyBalance(map){
+  const schema = balanceSchema();
+  let n = 0, unknown = [];
+  Object.keys(map).forEach(k=>{
+    if(schema[k]){ schema[k].set(map[k]); n++; }
+    else if(/^(rule|tower|enemy|level)\./.test(k)) unknown.push(k);
+  });
+  // Max HP of ships currently on the map also updates accordingly (keeps their current HP ratio)
+  state.ships.forEach(s=>{
+    const mx = tHp(s.kind, s.upgraded);
+    if(mx !== s.maxHp){ const ratio = s.maxHp ? s.hp/s.maxHp : 1; s.maxHp = mx; s.hp = Math.max(1, Math.round(mx*ratio)); }
+  });
+  render();
+  return { applied:n, unknown };
+}
+function balanceToCsv(){
+  const schema = balanceSchema();
+  const GHI = {
+    'rule.maxStack':'Max number of enemies stacked in 1 cell while blocked',
+    'rule.stepMs':'Duration of 1 step at x1 speed (milliseconds)',
+    'rule.sellRefund':'What fraction of spent gold selling a ship refunds (0.6 = 60%)',
+    'tower.dps.upgradeCost':'DPS upgrade price (fully heals)',
+    'tower.range.ring':'1 = the 8 surrounding cells',
+    'tower.range.ringUp':'2 = 1 more ring on top (24 cells)',
+    'tower.range.upgradeCost':'Range upgrade price',
+    'tower.threat.upCostLv2':'Price to upgrade Threat Lv1 -> Lv2 (also scares off Tankers)',
+    'tower.threat.upCostLv3':'Price to upgrade Threat Lv2 -> Lv3 (also scares off Jammers)',
+    'enemy.normal.wariness':'Alert Level: dodges any cell with Threat >= this number',
+    'enemy.tank.wariness':'Alert Level',
+    'enemy.jammer.wariness':'Alert Level',
+    'man1.killGold':'Gold earned per enemy killed',
+    'man1.startGold':'Starting gold for Level 1 (exactly 1 DPS)',
+    'man1.waveBonus1':'Wave 1 clear bonus — adds just enough spare gold to buy Range OR upgrade the DPS',
+    'man2.startGold':'Starting gold for Level 2 (exactly 1 DPS + 1 Range)',
+    'man3.startGold':'Starting gold for Level 3 (exactly 2 DPS + 1 Range)',
+    'man4.startGold':'Starting gold for Level 4',
+    'man4.swirlThreat':'Threat of the whirlpool cell AFTER the trap triggers (the first one to step in)',
+  };
+  const rows = [['Group','Data Key','Value','Notes']];
+  Object.keys(schema).forEach(k=>{
+    rows.push([k.split('.')[0], k, schema[k].get(), GHI[k]||'']);
+  });
+  return rows.map(r=>r.map(x=>{
+    const s = String(x);
+    return /[",\n]/.test(s) ? '"'+s.replace(/"/g,'""')+'"' : s;
+  }).join(',')).join('\n');
+}
+
+/* ---------- Load the file + WATCH for changes to update in REAL TIME ---------- */
+let balanceFileHandle = null, balanceLastMod = 0, balanceWatchTimer = null;
+function balanceToast(msg, bad){
+  let el = document.getElementById('balanceToast');
+  if(!el){
+    el = document.createElement('div'); el.id='balanceToast'; document.body.appendChild(el);
+  }
+  el.textContent = msg;
+  el.className = 'show'+(bad?' bad':'');
+  clearTimeout(el._t); el._t = setTimeout(()=> el.className='', 2600);
+}
+function ingestBalanceText(text, srcName){
+  try{
+    const map = parseBalanceCsv(text);
+    const res = applyBalance(map);
+    balanceToast(`📊 Loaded ${res.applied} values from ${srcName}`+(res.unknown.length?` (skipped ${res.unknown.length} unknown key(s))`:''));
+  }catch(e){ balanceToast('⚠ Balance data file error: '+e.message, true); }
+}
+async function pickBalanceFile(){
+  if(window.showOpenFilePicker){
+    try{
+      const [h] = await window.showOpenFilePicker({ types:[{description:'Balance data', accept:{'text/csv':['.csv'],'text/plain':['.txt']}}] });
+      balanceFileHandle = h;
+      const f = await h.getFile();
+      balanceLastMod = f.lastModified;
+      ingestBalanceText(await f.text(), f.name);
+      startBalanceWatch();
+      return;
+    }catch(e){ if(e && e.name==='AbortError') return; }
+  }
+  // Browser doesn't support the watchable file picker -> fall back to a plain input (you'll need to re-pick after every edit)
+  const inp = document.createElement('input');
+  inp.type='file'; inp.accept='.csv,.txt';
+  inp.onchange = ()=>{ const f=inp.files[0]; if(!f) return;
+    const rd=new FileReader(); rd.onload=()=>ingestBalanceText(rd.result, f.name); rd.readAsText(f); };
+  inp.click();
+}
+// Checks once a second whether the file was SAVED again -> if so, reload it immediately (real time)
+function startBalanceWatch(){
+  clearInterval(balanceWatchTimer);
+  balanceWatchTimer = setInterval(async ()=>{
+    if(!balanceFileHandle) return;
+    try{
+      const f = await balanceFileHandle.getFile();
+      if(f.lastModified !== balanceLastMod){
+        balanceLastMod = f.lastModified;
+        ingestBalanceText(await f.text(), f.name);
+      }
+    }catch(e){ /* file was deleted/moved -> ignore, try again next time */ }
+  }, 1000);
+}
+function downloadBalanceCsv(){
+  const blob = new Blob(['﻿'+balanceToCsv()], {type:'text/csv;charset=utf-8'});
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = 'So_Lieu_Can_Bang.csv';
+  a.click();
+  setTimeout(()=>URL.revokeObjectURL(a.href), 4000);
+}
+// Dragging a .csv file straight onto the game window also loads it
+window.addEventListener('dragover', e=>{
+  const t = e.dataTransfer && e.dataTransfer.types;
+  if(t && Array.prototype.indexOf.call(t,'Files')>=0) e.preventDefault();
+});
+window.addEventListener('drop', e=>{
+  if(!e.dataTransfer || !e.dataTransfer.files || !e.dataTransfer.files.length) return;
+  const f = e.dataTransfer.files[0];
+  if(!/\.(csv|txt)$/i.test(f.name)) return;
+  e.preventDefault();
+  const rd = new FileReader(); rd.onload = ()=> ingestBalanceText(rd.result, f.name); rd.readAsText(f);
+});
+const balBtn = document.getElementById('balanceBtn');
+if(balBtn) balBtn.addEventListener('click', pickBalanceFile);
+const balDlBtn = document.getElementById('balanceDlBtn');
+if(balDlBtn) balDlBtn.addEventListener('click', downloadBalanceCsv);
+
+/* =====================================================================
+   INIT
+===================================================================== */
+document.getElementById('gameTitle').textContent = `⚓ Naval TD — ${CFG.label}`;
+document.querySelectorAll('.levelTab').forEach(btn=>{
+  btn.classList.toggle('active', btn.dataset.level===ACTIVE_LEVEL);
+  btn.addEventListener('click', ()=>{
+    if(btn.dataset.level===ACTIVE_LEVEL) return;
+    location.hash='#'+btn.dataset.level;
+    location.reload();
+  });
+});
+if(ACTIVE_LEVEL==='man1'){
+  setCaption('👉 <b>Level 1</b>: enemies travel in exactly 1 straight line from the 🏴‍☠️ Den to the 🚢 Flagship. Drag the <b>DPS</b> card from the Shipyard (on the right) and drop it on a bordered cell, then move the mouse to pick a firing direction and click to lock it in. Note: the ship has to SAIL OUT from the Flagship to its position, so it takes a few steps to arrive.');
+} else if(ACTIVE_LEVEL==='man2'){
+  state.highlightIce = true;
+  setCaption('👉 <b>Level 2 — Threat</b>: the top lane has an ice tile 🧊 that <b>slows enemies by 1 step</b>. Place a <b>Threat</b> tower on the BOTTOM LANE to scare enemies up onto the top lane. Threat Lv1 scares off Normals, Lv2 also scares off Tankers, Lv3 also scares off Jammers — hover over an enemy\'s name to see its Alert Level.');
+} else if(ACTIVE_LEVEL==='man4'){
+  state.highlightSwirl = true;
+  state.highlightIce = true;
+  setCaption('👉 <b>Level 4 — Whirlpool</b>: the 🌀 cell is an <b>unarmed trap</b> — the first enemy to step in gets dragged down and killed, arming the trap (Threat 10), which makes everyone after it <b>detour down the lower loop</b>. That\'s exactly what you WANT: the loop is longer <b>and has an ice tile 🧊 that slows it by another step</b>, plus more room to fit Range towers — turning it into a <b>kill zone</b>. Use the trap + Threat to funnel enemies in there instead of trying to hold the line right at the Flagship\'s door.');
+} else if(ACTIVE_LEVEL==='man5'){
+  state.highlightSwirl = true;
+  setCaption('💀 <b>Level 5 — Death\'s Door</b>: there are <b>3 lanes</b> but only <b>2 pockets to place ships in</b> (row 2 and row 4) — each pocket only reaches 2 lanes, and only the <b>MIDDLE lane is reachable from both pockets</b>. <b>The Boss is immune to Threat</b> so it always takes the middle lane, and <b>touching the Flagship is an instant loss</b>. Use Threat to funnel regular enemies to the sides, mass your firepower on the middle lane — and remember to kill the Jammer before it neutralizes your Threat.');
+} else {
+  setCaption('👉 <b>Level 3 — Two-Front Assault</b>: enemies set out from 🏴‍☠️ along both the top and bottom lanes. At the junction (column 5) they\'ll consider cutting across to the other lane if the Threat ahead is higher than their Alert Level — unless both lanes are dangerous, in which case they stay stuck on their original lane.');
+}
+render();
+renderSpeedUI();
+startTicker();
+
+})();
+</script>
+</body>
+</html>
